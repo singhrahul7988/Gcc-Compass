@@ -118,10 +118,18 @@ export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: 
           <article className={`overview-metric ${tone}`} key={label}>
             <div className="metric-topline">
               <span className="metric-symbol"><Icon size={25} /></span>
-              <div className="metric-copy"><h3>{label} <small>({detail})</small> <Info size={14} /></h3><strong>{item?.value_or_range ?? 'Unknown'}</strong><p><ArrowUp size={13} />{growth}<span>vs. 2023</span></p></div>
+              <div className="metric-copy">
+                <div className="metric-title-row">
+                  <h3>{label}</h3>
+                  <Info size={14} />
+                </div>
+                <span className="metric-detail">{detail}</span>
+                <strong>{item?.value_or_range ?? 'Unknown'}</strong>
+                <p><ArrowUp size={13} />{growth}<span>vs. 2023</span></p>
+              </div>
             </div>
             <div className="mini-bars" role="img" aria-label={`${label} growth trend, ${growth} versus 2023`}><span className="mini-bars-axis" />{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ height: `${24 + index * 5}%` }} />)}<em>3Y trend</em></div>
-            <div className="metric-footer-row"><span>Source: {source}</span><b>{item?.confidence_score ?? 0}% confidence</b></div>
+            <div className="metric-footer-row"><span className="metric-source">Source: {source}</span><b>{item?.confidence_score ?? 0}% confidence</b></div>
           </article>
         ))}
       </div>
@@ -270,6 +278,7 @@ function latestCheckedDate(rows: Array<Record<string, string>>) {
 function SparkIcon() {
   return <span className="spark-icon" aria-hidden="true" />;
 }
+
 
 
 

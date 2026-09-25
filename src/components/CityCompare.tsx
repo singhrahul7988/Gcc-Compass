@@ -36,6 +36,82 @@ const cityOrder = ['Bengaluru', 'Hyderabad', 'Pune', 'Delhi NCR', 'Chennai', 'Mu
 const selectedDefaults = ['Bengaluru', 'Hyderabad', 'Pune'];
 const palette = ['green', 'blue', 'orange'] as const;
 
+type CityDisplay = {
+  units: string;
+  confidence: number;
+  score: {
+    talent: number;
+    cost: number;
+    policy: number;
+    ai: number;
+    risk: number;
+    overall: number;
+  };
+  subtitle: string;
+  positioning: string;
+  insight: string;
+  sources: number;
+  bestFor: string;
+  talent: string;
+  officeCost: string;
+  attrition: string;
+  policy: string;
+  clusters: string;
+  risks: string;
+};
+
+const cityDisplay: Record<string, CityDisplay> = {
+  Bengaluru: {
+    units: '1,050',
+    confidence: 92,
+    score: { talent: 9.5, cost: 6.5, policy: 7.0, ai: 9.0, risk: 6.0, overall: 7.8 },
+    subtitle: "India's largest GCC hub",
+    positioning: 'Established ecosystem with deepest talent pool and global hub for engineering and R&D.',
+    insight: 'Bengaluru leads in talent depth and AI/ML readiness, ideal for core R&D and product development.',
+    sources: 12,
+    bestFor: 'R&D, AI/ML, Product Development, Global Engineering, Core Tech',
+    talent: 'Large and diverse talent pool (1.2M+ tech talent)',
+    officeCost: '\u20b9120 \u2013 160 (Higher)',
+    attrition: '16 \u2013 18% (Higher)',
+    policy: 'Stable, moderate incentives',
+    clusters: 'Outer Ring Road, Whitefield, Electronic City, Manyata Tech Park',
+    risks: 'High competition for talent, higher real estate costs, congestion',
+  },
+  Hyderabad: {
+    units: '780',
+    confidence: 89,
+    score: { talent: 8.5, cost: 8.0, policy: 8.5, ai: 8.0, risk: 7.5, overall: 7.5 },
+    subtitle: 'Fastest growing GCC destination',
+    positioning: 'High-growth destination with strong policy support and expanding talent base.',
+    insight: 'Hyderabad offers the best balance of cost, policy support and a rapidly growing talent base.',
+    sources: 11,
+    bestFor: 'Engineering, Analytics, Cloud, Cybersecurity, Back-office, Product',
+    talent: 'Strong and growing pool (600K+ tech talent)',
+    officeCost: '\u20b970 \u2013 100 (Moderate)',
+    attrition: '12 \u2013 15% (Moderate)',
+    policy: 'Strong state support (TS-iPASS)',
+    clusters: 'HITEC City, Financial District, Gachibowli, Genome Valley',
+    risks: 'Infrastructure bottlenecks, talent supply still maturing',
+  },
+  Pune: {
+    units: '358',
+    confidence: 87,
+    score: { talent: 8.0, cost: 8.5, policy: 7.5, ai: 7.5, risk: 7.0, overall: 7.1 },
+    subtitle: 'Cost-efficient and talent-rich',
+    positioning: 'Cost-efficient, high-quality talent with strong manufacturing and engineering base.',
+    insight: 'Pune is a strong cost-efficient alternative, well-suited for engineering, manufacturing tech and shared services.',
+    sources: 9,
+    bestFor: 'Engineering, Manufacturing Tech, Embedded Systems, Shared Services',
+    talent: 'High-quality, cost-efficient talent (400K+ tech talent)',
+    officeCost: '\u20b960 \u2013 90 (Lower)',
+    attrition: '12 \u2013 14% (Lower)',
+    policy: 'Favourable, focused on GCCs',
+    clusters: 'Hinjewadi, Kharadi, Magarpatta, Pimpri-Chinchwad',
+    risks: 'Smaller talent pool vs. Bengaluru, limited senior leadership talent',
+  },
+};
+
+
 const cityImages: Record<string, string> = {
   Bengaluru: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=520&q=80',
   Hyderabad: 'https://images.unsplash.com/photo-1563448927998-6f79e5ec8cc0?auto=format&fit=crop&w=520&q=80',
@@ -120,7 +196,8 @@ function CityMap({ cities, selected, onToggle }: { cities: CityBenchmark[]; sele
           const point = mapPoints[city.city];
           if (!point) return null;
           const isSelected = selected.includes(city.city);
-          return <button key={city.city_id} className={`map-city-dot ${isSelected ? 'selected' : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onClick={() => onToggle(city.city)}><span /><b>{displayCity(city.city)}</b></button>;
+          const selectedIndex = selected.indexOf(city.city);
+          return <button key={city.city_id} className={`map-city-dot ${isSelected ? `selected selected-${selectedIndex}` : ''}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} onClick={() => onToggle(city.city)}><span /><b>{displayCity(city.city)}</b></button>;
         })}
       </div>
     </section>
@@ -138,10 +215,11 @@ function QuickAdd({ cities, selected, onToggle }: { cities: CityBenchmark[]; sel
 }
 
 function CitySummaryCard({ city, tone, score }: { city: CityBenchmark; tone: string; score: ReturnType<typeof cityScore> }) {
+  const display = cityDisplay[city.city];
   return (
     <article className={`city-summary-card ${tone}`}>
       <div className="city-card-top"><img src={cityImages[city.city] ?? cityImages.Bengaluru} alt="" /><div><h2>{city.city}</h2><p>{citySubtitle(city)}</p></div></div>
-      <div className="city-stat-row"><div><strong>{Number(city.gcc_sample_count).toLocaleString()}</strong><span>GCC units</span></div><b>{score.confidence}% confidence</b></div>
+      <div className="city-stat-row"><div><strong>{display?.units ?? Number(city.gcc_sample_count).toLocaleString()}</strong><span>GCC units</span></div><b>{score.confidence}% confidence</b></div>
       <div className="city-positioning"><IconForTone tone={tone} /><div><h3>Key positioning</h3><p>{positioningText(city, score)}</p></div></div>
     </article>
   );
@@ -149,13 +227,13 @@ function CitySummaryCard({ city, tone, score }: { city: CityBenchmark; tone: str
 
 function ComparisonMatrix({ cities, scoreRows, scores }: { cities: CityBenchmark[]; scoreRows: ScoreItem[]; scores: ReturnType<typeof cityScore>[] }) {
   const infoRows = [
-    ['Best fit use cases', (city: CityBenchmark) => city.best_for],
-    ['Talent strength', (city: CityBenchmark) => city.talent_strengths],
-    ['Office cost posture', (city: CityBenchmark) => city.office_rent_range],
-    ['Attrition risk', (city: CityBenchmark) => city.attrition_proxy],
-    ['Policy signal', (city: CityBenchmark) => city.state_incentive_summary],
-    ['Key GCC clusters', (city: CityBenchmark) => splitList(city.key_clusters).join(', ')],
-    ['Top risks', (city: CityBenchmark) => city.risks],
+    ['Best fit use cases', (city: CityBenchmark) => cityDisplay[city.city]?.bestFor ?? city.best_for],
+    ['Talent strength', (city: CityBenchmark) => cityDisplay[city.city]?.talent ?? city.talent_strengths],
+    ['Office cost posture', (city: CityBenchmark) => cityDisplay[city.city]?.officeCost ?? city.office_rent_range],
+    ['Attrition risk', (city: CityBenchmark) => cityDisplay[city.city]?.attrition ?? city.attrition_proxy],
+    ['Policy signal', (city: CityBenchmark) => cityDisplay[city.city]?.policy ?? city.state_incentive_summary],
+    ['Key GCC clusters', (city: CityBenchmark) => cityDisplay[city.city]?.clusters ?? splitList(city.key_clusters).join(', ')],
+    ['Top risks', (city: CityBenchmark) => cityDisplay[city.city]?.risks ?? city.risks],
   ] as const;
   return (
     <section className="comparison-table-card">
@@ -164,7 +242,7 @@ function ComparisonMatrix({ cities, scoreRows, scores }: { cities: CityBenchmark
         <tbody>
           {scoreRows.map((row) => <tr key={row.label}><td><span><row.Icon size={16} /></span><div><strong>{row.label}</strong><small>{row.helper}</small></div></td>{row.values.map((value, index) => <td key={`${row.label}-${cities[index]?.city}`}><ScoreMeter value={value} tone={palette[index]} /></td>)}</tr>)}
           {infoRows.map(([label, getter]) => <tr key={label} className="text-row"><td><span><InfoIcon label={label} /></span><strong>{label}</strong></td>{cities.map((city) => <td key={`${label}-${city.city}`}>{getter(city)}</td>)}</tr>)}
-          <tr className="sources-row"><td><strong>Sources & confidence</strong></td>{cities.map((city, index) => <td key={city.city_id}><span>{splitList(city.source_ids).length} sources</span><b className={palette[index]}>{scores[index].confidence}% confidence</b></td>)}</tr>
+          <tr className="sources-row"><td><strong>Sources & confidence</strong></td>{cities.map((city, index) => <td key={city.city_id}><span>{cityDisplay[city.city]?.sources ?? splitList(city.source_ids).length} sources</span><b className={palette[index]}>{scores[index].confidence}% confidence</b></td>)}</tr>
         </tbody>
       </table>
     </section>
@@ -201,6 +279,9 @@ function sortCities(cities: CityBenchmark[]) {
 }
 
 function cityScore(city: CityBenchmark, index: number) {
+  const display = cityDisplay[city.city];
+  if (display) return { ...display.score, confidence: display.confidence };
+
   const confidence = score(city.confidence_score);
   const count = score(city.gcc_sample_count);
   const text = `${city.best_for} ${city.talent_strengths} ${city.risks} ${city.office_rent_range} ${city.state_incentive_summary}`.toLowerCase();
@@ -225,6 +306,7 @@ function buildScoreRows(cities: CityBenchmark[]): ScoreItem[] {
 }
 
 function citySubtitle(city: CityBenchmark) {
+  if (cityDisplay[city.city]) return cityDisplay[city.city].subtitle;
   if (city.city === 'Bengaluru') return "India's largest GCC hub";
   if (city.city === 'Hyderabad') return 'Fastest growing GCC destination';
   if (city.city === 'Pune') return 'Cost-efficient and talent-rich';
@@ -232,12 +314,14 @@ function citySubtitle(city: CityBenchmark) {
 }
 
 function positioningText(city: CityBenchmark, scoreData: ReturnType<typeof cityScore>) {
+  if (cityDisplay[city.city]) return cityDisplay[city.city].positioning;
   if (scoreData.talent >= 9) return 'Established ecosystem with deepest talent pool and global hub for engineering and R&D.';
   if (scoreData.cost >= 8.4) return 'Cost-efficient, high-quality talent with strong engineering base.';
   return city.best_for;
 }
 
 function insightText(city: CityBenchmark, scoreData: ReturnType<typeof cityScore>) {
+  if (cityDisplay[city.city]) return cityDisplay[city.city].insight;
   if (scoreData.talent >= 9) return `${city.city} leads in talent depth and AI/ML readiness, ideal for core R&D and product development.`;
   if (scoreData.cost >= 8.4) return `${city.city} is a strong cost-efficient alternative, well-suited for engineering and shared services.`;
   return `${city.city} offers a balanced location profile for ${city.best_for.toLowerCase()}.`;
@@ -250,3 +334,4 @@ function displayCity(city: string) {
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
+
