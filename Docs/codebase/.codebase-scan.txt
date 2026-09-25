@@ -1,0 +1,373 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.playwright-mcp
+.playwright-mcp\console-2026-09-24T22-43-29-793Z.log
+.playwright-mcp\console-2026-09-24T22-43-34-375Z.log
+.playwright-mcp\console-2026-09-24T22-43-37-298Z.log
+.playwright-mcp\console-2026-09-24T22-48-59-505Z.log
+.playwright-mcp\console-2026-09-24T22-49-25-571Z.log
+.playwright-mcp\console-2026-09-24T22-49-30-831Z.log
+.playwright-mcp\console-2026-09-24T22-49-52-144Z.log
+.playwright-mcp\console-2026-09-24T22-50-10-392Z.log
+.playwright-mcp\console-2026-09-24T22-53-05-497Z.log
+.playwright-mcp\console-2026-09-24T22-53-12-395Z.log
+.playwright-mcp\page-2026-09-24T22-43-39-602Z.yml
+.playwright-mcp\page-2026-09-24T22-49-06-575Z.yml
+.playwright-mcp\page-2026-09-24T22-49-28-062Z.yml
+.playwright-mcp\page-2026-09-24T22-49-33-249Z.yml
+.playwright-mcp\page-2026-09-24T22-49-53-814Z.yml
+.playwright-mcp\page-2026-09-24T22-50-11-787Z.yml
+.playwright-mcp\page-2026-09-24T22-53-06-971Z.yml
+.playwright-mcp\page-2026-09-24T22-53-13-862Z.yml
+artifacts
+artifacts\audit_atlas_current.py
+artifacts\audit_atlas_fullpage.py
+artifacts\capture_atlas.py
+artifacts\capture_atlas_after.py
+artifacts\city-compare-implemented.png
+artifacts\gcc-atlas-audit-fixed.png
+artifacts\gcc-atlas-bottom-aligned.png
+artifacts\gcc-atlas-button-status-fixed.png
+artifacts\gcc-atlas-fullpage-audit.png
+artifacts\gcc-atlas-polished.png
+artifacts\gcc-atlas-source-backed-fixed.png
+artifacts\gcc-atlas-status-aligned.png
+artifacts\gcc-atlas-tabs-fixed.png
+artifacts\verify_atlas_audit_fixes.py
+artifacts\verify_atlas_bottom_alignment.py
+artifacts\verify_atlas_button_status.py
+artifacts\verify_atlas_filters.py
+artifacts\verify_atlas_flows.py
+artifacts\verify_atlas_polish.py
+artifacts\verify_atlas_sort_select.py
+artifacts\verify_atlas_source_backed.py
+artifacts\verify_atlas_status_alignment.py
+artifacts\verify_atlas_tabs.py
+artifacts\verify_city_compare.py
+dataset
+dataset\notes
+dataset\notes\collection_log.md
+dataset\organized
+dataset\organized\00_inventory
+dataset\organized\00_inventory\pdf_processing_summary.json
+dataset\organized\00_inventory\raw_file_inventory.csv
+dataset\organized\01_by_category
+dataset\organized\01_by_category\company_entity_data
+dataset\organized\01_by_category\macro_gcc_reports
+dataset\organized\01_by_category\misc
+dataset\organized\01_by_category\real_estate_city_benchmarking
+dataset\organized\01_by_category\setup_compliance_tax
+dataset\organized\01_by_category\sez_stpi_facility_signals
+dataset\organized\01_by_category\stakeholder_provider_landscape
+dataset\organized\01_by_category\state_policy_incentives
+dataset\organized\01_by_category\talent_compensation
+dataset\organized\01_by_category\visual_reference
+dataset\organized\02_visual_review
+dataset\organized\02_visual_review\2025_Asia_Pacific_High_Tech_Total_Remuneration_Database__TRD_
+dataset\organized\02_visual_review\26-insights-india-office-market-dynamics-q2-2026
+dataset\organized\02_visual_review\cognizant-avasant-gcc-services-radarview-2025
+dataset\organized\02_visual_review\Dhruva-GCC-Report-2025
+dataset\organized\02_visual_review\Establish_gcc_2025
+dataset\organized\02_visual_review\gcc-driving-indias-real-estate-growth-story-2024-11629
+dataset\organized\02_visual_review\GCC-SOP_140326
+dataset\organized\02_visual_review\GCC_IN_INDIA_2025
+dataset\organized\02_visual_review\gccs-in-india.ashx
+dataset\organized\02_visual_review\global-cabability-centres-compressed_1
+dataset\organized\02_visual_review\global-capability-centres-and-india-office-market-landscape-2024-11382
+dataset\organized\02_visual_review\Gujarat_Global_Capability_Center
+dataset\organized\02_visual_review\india-office-market-report-q2-2026
+dataset\organized\02_visual_review\India_Office_Figures_Q2_2026
+dataset\organized\02_visual_review\kpmg-firms-identified-as-a-leader-in-isg-provider-lens-global-capability-center-gcc-services-2025.pdf.coredownload.inline.pdf
+dataset\organized\02_visual_review\Minutes_127th_BOA_for_SEZs
+dataset\organized\02_visual_review\Nidhi_Scheme_for_setting_up_business
+dataset\organized\02_visual_review\Scheme_to_promote_GCC
+dataset\organized\02_visual_review\Sez_113rd_BoA_-_Agenda
+dataset\organized\02_visual_review\SEZ_Notified_351
+dataset\organized\02_visual_review\UP-GCC-Policy_200426
+dataset\organized\02_visual_review\UP_GCC-Policy-Eng_050625
+dataset\organized\02_visual_review\zinnov-nasscom-india-gcc-landscape-report-2026
+dataset\organized\03_extracted_tables
+dataset\organized\03_extracted_tables\2025_Asia_Pacific_High_Tech_Total_Remuneration_Database__TRD_
+dataset\organized\03_extracted_tables\26-insights-india-office-market-dynamics-q2-2026
+dataset\organized\03_extracted_tables\cognizant-avasant-gcc-services-radarview-2025
+dataset\organized\03_extracted_tables\Dhruva-GCC-Report-2025
+dataset\organized\03_extracted_tables\Establish_gcc_2025
+dataset\organized\03_extracted_tables\gcc-driving-indias-real-estate-growth-story-2024-11629
+dataset\organized\03_extracted_tables\GCC-SOP_140326
+dataset\organized\03_extracted_tables\GCC_IN_INDIA_2025
+dataset\organized\03_extracted_tables\gccs-in-india.ashx
+dataset\organized\03_extracted_tables\global-cabability-centres-compressed_1
+dataset\organized\03_extracted_tables\global-capability-centres-and-india-office-market-landscape-2024-11382
+dataset\organized\03_extracted_tables\Gujarat_Global_Capability_Center
+dataset\organized\03_extracted_tables\india-office-market-report-q2-2026
+dataset\organized\03_extracted_tables\India_Office_Figures_Q2_2026
+dataset\organized\03_extracted_tables\kpmg-firms-identified-as-a-leader-in-isg-provider-lens-global-capability-center-gcc-services-2025.pdf.coredownload.inline.pdf
+dataset\organized\03_extracted_tables\Minutes_127th_BOA_for_SEZs
+dataset\organized\03_extracted_tables\Nidhi_Scheme_for_setting_up_business
+dataset\organized\03_extracted_tables\Scheme_to_promote_GCC
+dataset\organized\03_extracted_tables\Sez_113rd_BoA_-_Agenda
+dataset\organized\03_extracted_tables\SEZ_Notified_351
+dataset\organized\03_extracted_tables\UP-GCC-Policy_200426
+dataset\organized\03_extracted_tables\UP_GCC-Policy-Eng_050625
+dataset\organized\03_extracted_tables\zinnov-nasscom-india-gcc-landscape-report-2026
+dataset\organized\04_spreadsheet_profiles
+dataset\organized\04_spreadsheet_profiles\data_gov_data__sample.csv
+dataset\organized\04_spreadsheet_profiles\flexiple_india_verified_centers__Centers__sample.csv
+dataset\organized\04_spreadsheet_profiles\flexiple_india_verified_centers__Filter_Options__sample.csv
+dataset\organized\04_spreadsheet_profiles\flexiple_india_verified_centers__Source_Notes__sample.csv
+dataset\organized\04_spreadsheet_profiles\GCC_Index_All_Companies__Activity_Timeline__sample.csv
+dataset\organized\04_spreadsheet_profiles\GCC_Index_All_Companies__Company_Profiles__sample.csv
+dataset\organized\04_spreadsheet_profiles\GCC_Index_All_Companies__Data_Summary__sample.csv
+dataset\organized\04_spreadsheet_profiles\GCC_Index_All_Companies__Dropdown_Options__sample.csv
+dataset\organized\04_spreadsheet_profiles\GCC_Index_All_Companies__Fetch_Audit__sample.csv
+dataset\organized\04_spreadsheet_profiles\spreadsheet_profiles.json
+dataset\organized\05_reconciliation
+dataset\organized\05_reconciliation\discrepancies.md
+dataset\organized\05_reconciliation\pdf_text_snippets
+dataset\organized\06_app_ready
+dataset\organized\06_app_ready\assumptions_app_ready.csv
+dataset\organized\06_app_ready\city_benchmarks_app_ready.csv
+dataset\organized\06_app_ready\company_seed_merged.csv
+dataset\organized\06_app_ready\gcc_index_activity_timeline.csv
+dataset\organized\06_app_ready\gcc_index_mca_cin_verified.csv
+dataset\organized\06_app_ready\gcc_records_app_ready.csv
+dataset\organized\06_app_ready\high_value_document_map.csv
+dataset\organized\06_app_ready\mca_keyword_entity_matches.csv
+dataset\organized\06_app_ready\prototype_csv_build_summary.md
+dataset\organized\06_app_ready\prototype_data_readiness.md
+dataset\organized\06_app_ready\real_estate_document_index.csv
+dataset\organized\06_app_ready\stakeholders_app_ready.csv
+dataset\organized\06_app_ready\state_policies_app_ready.csv
+dataset\organized\06_app_ready\state_policy_document_index.csv
+dataset\organized\07_noise_review
+dataset\organized\07_noise_review\low_relevance_noise
+dataset\organized\processing_report.md
+dataset\processed
+dataset\processed\assumptions.csv
+dataset\processed\city_benchmarks.csv
+dataset\processed\company_seed_merged.csv
+dataset\processed\gcc_index_activity_timeline.csv
+dataset\processed\gcc_index_mca_cin_verified.csv
+dataset\processed\gcc_records.csv
+dataset\processed\mca_keyword_entity_matches.csv
+dataset\processed\raw_file_inventory.csv
+dataset\processed\sources.csv
+dataset\processed\stakeholders.csv
+dataset\processed\state_policies.csv
+dataset\raw
+dataset\raw\2025 Asia Pacific High Tech Total Remuneration Database (TRD).pdf
+dataset\raw\26-insights-india-office-market-dynamics-q2-2026.pdf
+dataset\raw\cognizant-avasant-gcc-services-radarview-2025.pdf
+dataset\raw\data_gov data.csv
+dataset\raw\Dhruva-GCC-Report-2025.pdf
+dataset\raw\Establish gcc 2025.pdf
+dataset\raw\flexiple_india_verified_centers.xlsx
+dataset\raw\GCC IN INDIA 2025.pdf
+dataset\raw\gcc-driving-indias-real-estate-growth-story-2024-11629.pdf
+dataset\raw\GCC-SOP_140326.pdf
+dataset\raw\GCC_Index_All_Companies.xlsx
+dataset\raw\gccs-in-india.ashx.pdf
+dataset\raw\global-cabability-centres-compressed_1.pdf
+dataset\raw\global-capability-centres-and-india-office-market-landscape-2024-11382.pdf
+dataset\raw\Gujarat Global Capability Center.pdf
+dataset\raw\india-office-market-report-q2-2026.pdf
+dataset\raw\India_Office_Figures_Q2_2026.pdf
+dataset\raw\kpmg-firms-identified-as-a-leader-in-isg-provider-lens-global-capability-center-gcc-services-2025.pdf.coredownload.inline.pdf.pdf
+dataset\raw\Minutes 127th BOA for SEZs.pdf
+dataset\raw\Nidhi Scheme for setting up business.pdf
+dataset\raw\Scheme to promote GCC.pdf
+dataset\raw\Screenshot.png
+dataset\raw\Sez_113rd BoA - Agenda.pdf
+dataset\raw\SEZ_Notified 351.pdf
+dataset\raw\UP-GCC-Policy_200426.pdf
+dataset\raw\UP_GCC-Policy-Eng_050625.pdf
+dataset\raw\zinnov-nasscom-india-gcc-landscape-report-2026.pdf
+dataset\README.md
+dataset\sources
+dataset\sources\source_links.md
+dataset\templates
+dataset\templates\assumptions_template.csv
+dataset\templates\city_benchmarks_template.csv
+dataset\templates\gcc_records_template.csv
+dataset\templates\sources_template.csv
+dataset\templates\stakeholders_template.csv
+dataset\templates\state_policies_template.csv
+Docs
+Docs\Chatgpt-deep-research-report.md
+Docs\codebase
+Docs\codebase\.codebase-scan.txt
+Docs\Context.md
+Docs\Deliverables.md
+Docs\Gemini- India GCC Ecosystem Research Plan.md
+Docs\HANDOFF.md
+
+=== STACK DETECTION (manifest files) ===
+
+--- package-lock.json ---
+{
+  "name": "gcc-compass-prototype",
+  "version": "0.1.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "gcc-compass-prototype",
+      "version": "0.1.0",
+      "dependencies": {
+        "@types/leaflet": "^1.9.22",
+        "@vitejs/plugin-react": "^5.0.3",
+        "leaflet": "^1.9.4",
+        "lucide-react": "^0.544.0",
+        "react": "^19.1.1",
+        "react-dom": "^19.1.1",
+        "react-leaflet": "^5.0.0",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7"
+      },
+      "devDependencies": {
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0"
+      }
+    },
+    "node_modules/@babel/code-frame": {
+      "version": "7.29.7",
+      "resolved": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.7.tgz",
+      "integrity": "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==",
+      "license": "MIT",
+      "dependencies": {
+        "@babel/helper-validator-identifier": "^7.29.7",
+        "js-tokens": "^4.0.0",
+        "picocolors": "^1.1.1"
+      },
+      "engines": {
+        "node": ">=6.9.0"
+      }
+    },
+    "node_modules/@babel/compat-data": {
+      "version": "7.29.7",
+      "resolved": "https://registry.npmjs.org/@babel/compat-data/-/compat-data-7.29.7.tgz",
+      "integrity": "sha512-locTkQyKvwIEgBzVrn8693ebc97F2U8ZHjbXwDXJ5Fn2TCpNwTlKcaKLkdHop5c/icOFE7qt7Q9JC5hnKNa6Gg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">=6.9.0"
+      }
+    },
+    "node_modules/@babel/core": {
+      "version": "7.29.7",
+      "resolved": "https://registry.npmjs.org/@babel/core/-/core-7.29.7.tgz",
+      "integrity": "sha512-RgHBCvtjbOK2gXSNBNIkNoEc9qoVEtau3hj8gEqKQuL3HZAibKarWFEI3Lfm6EYKkLalOh8eSrj9b+ch9H/VBA==",
+      "license": "MIT",
+      "dependencies": {
+        "@babel/code-frame": "^7.29.7",
+        "@babel/generator": "^7.29.7",
+        "@babel/helper-compilation-targets": "^7.29.7",
+        "@babel/helper-module-transforms": "^7.29.7",
+        "@babel/helpers": "^7.29.7",
+        "@babel/parser": "^7.29.7",
+        "@babel/template": "^7.29.7",
+        "@babel/traverse": "^7.29.7",
+        "@babel/types": "^7.29.7",
+        "@jridgewell/remapping": "^2.3.5",
+        "convert-source-map": "^2.0.0",
+        "debug": "^4.1.0",
+        "gensync": "^1.0.0-beta.2",
+        "json5": "^2.2.3",
+        "semver": "^6.3.1"
+      },
+      "engines": {
+        "node": ">=6.9.0"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/babel"
+      }
+    },
+    "node_modules/@babel/generator": {
+      "version": "7.29.8",
+
+[TRUNCATED] Showing first 80 of 1787 lines.
+--- package.json ---
+{
+  "name": "gcc-compass-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@types/leaflet": "^1.9.22",
+    "@vitejs/plugin-react": "^5.0.3",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-leaflet": "^5.0.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
+  }
+}
+
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+Found: tsconfig.json
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+No .env.example or .env.template found. Identify required environment variables by searching the code and config for environment variable reads.
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+None found.
+
+=== GIT RECENT COMMITS (last 20) ===
+No commits found.
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+None found.
+
+=== MONOREPO SIGNALS ===
+No monorepo signals detected.
+
+=== CODE METRICS ===
+Total files scanned: 763
+Total lines of code: 8260
+
+Files by language:
+  Other: 730
+  Python: 18
+  TypeScript/React: 11
+  TypeScript: 4
+
+Top 10 largest files:
+dataset\organized\01_by_category\company_entity_data\data_gov data.csv: 36853.5KB
+dataset\raw\data_gov data.csv: 36853.5KB
+dataset\organized\01_by_category\macro_gcc_reports\zinnov-nasscom-india-gcc-landscape-report-2026.pdf: 11281.0KB
+dataset\raw\zinnov-nasscom-india-gcc-landscape-report-2026.pdf: 11281.0KB
+dataset\organized\01_by_category\real_estate_city_benchmarking\global-capability-centres-and-india-office-market-landscape-2024-11382.pdf: 9441.7KB
+dataset\raw\global-capability-centres-and-india-office-market-landscape-2024-11382.pdf: 9441.7KB
+dataset\organized\01_by_category\stakeholder_provider_landscape\kpmg-firms-identified-as-a-leader-in-isg-provider-lens-global-capability-center-gcc-services-2025.pdf.coredownload.inline.pdf.pdf: 8219.5KB
+dataset\raw\kpmg-firms-identified-as-a-leader-in-isg-provider-lens-global-capability-center-gcc-services-2025.pdf.coredownload.inline.pdf.pdf: 8219.5KB
+dataset\organized\02_visual_review\Establish_gcc_2025\page_001.png: 8202.2KB
+dataset\organized\01_by_category\setup_compliance_tax\Dhruva-GCC-Report-2025.pdf: 7526.4KB
+
+=== CI/CD PIPELINES ===
+No CI/CD pipelines detected.
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===
