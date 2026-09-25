@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { BarChart3, Bell, Building2, Calculator, Command, Map, Network, Search, Sparkles } from 'lucide-react';
 import { CityCompare } from './components/CityCompare';
+import { BuildVsBuy } from './components/BuildVsBuy';
 import { GccAtlas } from './components/GccAtlas';
 import { MarketSnapshot } from './components/MarketSnapshot';
 import { assumptions, cityBenchmarks, dataStats, gccRecords, statePolicies } from './data';
@@ -17,7 +18,7 @@ const navItems = [
 type Page = (typeof navItems)[number][0];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : 'overview');
+  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : 'overview');
 
   return (
     <div className="app-shell">
@@ -58,6 +59,8 @@ export default function App() {
           <GccAtlas records={gccRecords} />
         ) : activePage === 'cities' ? (
           <CityCompare cities={cityBenchmarks} policies={statePolicies} onOpenAnalyst={() => setActivePage('analyst')} />
+        ) : activePage === 'build' ? (
+          <BuildVsBuy cities={cityBenchmarks} assumptions={assumptions} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>
@@ -69,5 +72,3 @@ export default function App() {
     </div>
   );
 }
-
-

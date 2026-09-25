@@ -18,6 +18,7 @@ pnpm-debug.log*
 
 # Generated screenshots and verification captures
 artifacts/*.png
+artifacts/**/*.png
 
 # Large raw/generated research artifacts
 dataset/raw/

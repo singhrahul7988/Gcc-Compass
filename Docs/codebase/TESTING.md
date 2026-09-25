@@ -66,7 +66,7 @@ tsc && vite build
 - `docs/codebase/.codebase-scan.txt`
 - `artifacts/verify_atlas_flows.py`
 - `artifacts/verify_city_compare.py`
-- `artifacts/capture_atlas.py`
+- `artifacts/verify_atlas_filters.py`
 - `.playwright-mcp/`
 - `src/data/csv.ts`
 - `src/components/AiAnalyst.tsx`

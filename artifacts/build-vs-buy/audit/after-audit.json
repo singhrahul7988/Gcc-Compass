@@ -1,0 +1,136 @@
+{
+  "states": {
+    "default": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "city_hyderabad": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit HyderabadGood fit forScaled engineeringHealthcare/life sciencesAnalyticsAI/data teamsPlan forRising office demandIncreasing competition for senior talentTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "small_team_40": {
+      "route": "EOR / Flexiple-managed team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion40 people sits inside the dataset\u2019s 30\u201350 person crossover band.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "large_long_control": {
+      "route": "Direct entity / Full GCC",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion600 people makes long-term ownership worth evaluating.A 12+ month horizon makes a direct entity more feasible.You prioritized long-term control.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "urgent": {
+      "route": "EOR / Flexiple-managed team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.The under-3-month target strongly favors an employment bridge.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "ai_mix_60": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix30% Engineering / Product60% Data / AI10% G&A / SupportRole insight60% Data / AI roles: Very high \u2014 specialist AI roles require premium assumptions. Specialist pay premiums are not quantified in the dataset.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "partner_off": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You did not select partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.Validate BOT still ranked highest for your timing. Confirm whether you are willing to use a setup partner.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "office_on": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.Validate An immediate physical office is not guaranteed by any route. Confirm availability before committing.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "scale_on": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.Your 500+ growth plan increases the value of a durable operating structure.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "ip_on": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.Validate IP-sensitive work needs contract, access-control and data-handling review for any route.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "control_priority": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized long-term control.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "explore_eor": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": "Exploring EOR / Flexiple-managed teamThe guide still suggests BOT / Managed Offshore Team. Partner handles employment administration. Add pricing to compare Year 1 costs.Return to suggestion",
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "cheaper_eor_quote": {
+      "route": "EOR / Flexiple-managed team",
+      "cost": "63% below direct",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.Your entered Year 1 pricing puts EOR / Flexiple-managed team 50% below the next quoted route.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "download": {
+      "name": "gcc-build-vs-buy-scenario.csv",
+      "size": 2081
+    },
+    "mobile": {
+      "route": "BOT / Managed Offshore Team",
+      "cost": "Add pricing",
+      "factors": "What shaped the suggestion200 people favors a scalable managed launch in this decision guide.A 3\u20136 month target favors a managed build.You prioritized launch speed.You prefer partner support.",
+      "cityFit": "City and role fit BengaluruGood fit forAI/product engineeringPlatform teamsEnterprise-scale GCCsPlan forTalent competitionCommute pressurePremium rentsAttritionTeam mix60% Engineering / Product20% Data / AI20% G&A / SupportRole insightCity salary data is qualitative. Enter role-based quotes in Cost breakdown for a useful price comparison.",
+      "exploration": null,
+      "pageWidth": 390,
+      "viewport": 390
+    }
+  },
+  "consoleErrors": [],
+  "sourceLinkCount": 7
+}

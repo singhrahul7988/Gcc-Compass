@@ -21,9 +21,9 @@
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import { MapContainer, Marker, TileLayer, Tooltip, ZoomControl, useMapEvents } from 'react-leaflet';
+import { AttributionControl, MapContainer, Marker, TileLayer, Tooltip, ZoomControl, useMapEvents } from 'react-leaflet';
 import hyderabadImage from '../assets/cities/hyderabad.jpg';
-import puneImage from '../assets/cities/pune.jpg';
+import puneImage from '../assets/cities/pune-unsplash.jpg';
 import { CityBenchmark, StatePolicy } from '../data';
 import { score, splitList } from '../data/csv';
 
@@ -145,21 +145,21 @@ export function CityCompare({ cities, policies, onOpenAnalyst }: CityCompareProp
   const orderedCities = useMemo(() => sortCities(cities), [cities]);
   const [selectedCities, setSelectedCities] = useState(() => {
     const shared = new URLSearchParams(location.hash.slice(1)).get('cities')?.split(',');
-    const valid = shared?.filter((name) => cityOrder.includes(name)).slice(0, 3);
+    const valid = [...new Set(shared?.filter((name) => orderedCities.some((city) => city.city === name)) ?? [])];
     return valid?.length ? valid : selectedDefaults;
   });
   const [weights, setWeights] = useState(defaultWeights);
   const [shareLabel, setShareLabel] = useState('Share');
   const searchRef = useRef<HTMLInputElement>(null);
-  const selected = useMemo(() => selectedCities.map((name) => orderedCities.find((city) => city.city === name)).filter(Boolean).slice(0, 3) as CityBenchmark[], [orderedCities, selectedCities]);
+  const selected = useMemo(() => selectedCities.map((name) => orderedCities.find((city) => city.city === name)).filter(Boolean) as CityBenchmark[], [orderedCities, selectedCities]);
   const scores = useMemo(() => selected.map((city, index) => cityScore(city, index)), [selected]);
   const scoreRows = useMemo<ScoreItem[]>(() => buildScoreRows(selected), [selected]);
-  const ranked = useMemo(() => selected.map((city, index) => ({ city, score: weightedScore(scores[index], weights), tone: palette[index] })).sort((a, b) => b.score - a.score), [selected, scores, weights]);
+  const ranked = useMemo(() => selected.map((city, index) => ({ city, score: weightedScore(scores[index], weights), tone: palette[index % palette.length] })).sort((a, b) => b.score - a.score), [selected, scores, weights]);
 
   const toggleCity = (cityName: string) => {
     setSelectedCities((current) => {
       if (current.includes(cityName)) return current.length > 1 ? current.filter((item) => item !== cityName) : current;
-      return [...current, cityName].slice(-3);
+      return [...current, cityName];
     });
   };
 
@@ -206,7 +206,7 @@ export function CityCompare({ cities, policies, onOpenAnalyst }: CityCompareProp
 
         <section className="city-main-panel">
           <div className="city-summary-grid">
-            {selected.map((city, index) => <CitySummaryCard key={city.city_id} city={city} tone={palette[index]} score={scores[index]} />)}
+            {selected.map((city, index) => <CitySummaryCard key={city.city_id} city={city} tone={palette[index % palette.length]} score={scores[index]} />)}
           </div>
           <ComparisonMatrix cities={selected} scoreRows={scoreRows} scores={scores} />
         </section>
@@ -217,7 +217,6 @@ export function CityCompare({ cities, policies, onOpenAnalyst }: CityCompareProp
           <div className="city-ai-card"><ShieldCheck size={24} /><h3>Need a deeper analysis?</h3><p>Let our AI analyst recommend the best location based on your specific requirements.</p><button onClick={onOpenAnalyst}><Sparkles size={16} />Ask AI Analyst <ChevronRight size={16} /></button></div>
         </aside>
       </div>
-      <p className="city-photo-credits">Photos: <a href="https://commons.wikimedia.org/wiki/File:Hyderabad_-_Charminar.jpg" target="_blank" rel="noreferrer">Hyderabad by PaviKukku (CC0)</a> Â· <a href="https://commons.wikimedia.org/wiki/File:Skyline_of_Pune_city_as_seen_from_The_Westin_Koregaon_Park.jpg" target="_blank" rel="noreferrer">Pune by Randy Breese</a> (<a href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noreferrer">CC BY 2.0</a>, cropped).</p>
     </section>
   );
 }
@@ -229,24 +228,28 @@ function CityMap({ cities, selected, onToggle }: { cities: CityBenchmark[]; sele
       <div className="city-map-heading"><span className="india-flag" /> India <span>Explore cities</span></div>
       <MapContainer className="city-embedded-map" bounds={indiaBounds} boundsOptions={{ padding: [12, 12] }}
         maxBounds={[[5, 65], [36, 92]]} maxBoundsViscosity={0.75} minZoom={4} maxZoom={10}
-        scrollWheelZoom zoomControl={false}>
+        scrollWheelZoom zoomControl={false} attributionControl={false}>
         <CityMapZoomObserver onZoom={setZoomLevel} />
         <ZoomControl position="topright" />
-        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
+        <AttributionControl position="bottomright" prefix={false} />
+        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution={'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'} />
         {cities.map((city) => {
           const coordinates = cityCoordinates[city.city];
           if (!coordinates) return null;
           const selectedIndex = selected.indexOf(city.city);
-          const tone = selectedIndex >= 0 ? palette[selectedIndex] : 'muted';
+          const tone = selectedIndex >= 0 ? palette[selectedIndex % palette.length] : 'muted';
           const icon = L.divIcon({ className: `compare-map-marker ${tone} ${zoomLevel >= 6 ? 'show-label' : ''}`,
             html: `<span class="compare-map-pin"></span><b>${displayCity(city.city).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</b>`,
             iconSize: [18, 18], iconAnchor: [9, 9] });
           return <Marker key={city.city_id} position={coordinates} icon={icon} eventHandlers={{ click: () => onToggle(city.city) }}>
-            <Tooltip direction="top" offset={[0, -8]}>{city.city} Â· {selectedIndex >= 0 ? 'Selected' : 'Click to compare'}</Tooltip>
+            <Tooltip className="city-map-tooltip" direction="top" offset={[0, -8]}>
+              <span className="city-tooltip-location">{city.city}, {city.state}</span>
+              <span className="city-tooltip-status">{selectedIndex >= 0 ? 'Selected' : 'Click to compare'}</span>
+            </Tooltip>
           </Marker>;
         })}
       </MapContainer>
-      <div className="city-map-hint">Scroll to zoom Â· click markers to compare</div>
+      <div className="city-map-hint">Scroll to zoom · Click pins</div>
     </section>
   );
 }
@@ -262,7 +265,7 @@ function QuickAdd({ cities, selected, onToggle, searchRef }: { cities: CityBench
   const filtered = cities.filter((city) => city.city.toLowerCase().includes(query.trim().toLowerCase()));
   return (
     <section className="quick-city-card">
-      <div className="quick-city-heading"><h3>Compare cities</h3><span>{selected.length}/3 selected</span></div>
+      <div className="quick-city-heading"><h3>Compare cities</h3><span aria-live="polite">{selected.length}/{cities.length} selected</span></div>
       <label><Search size={15} /><input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search cities" /></label>
       <div className="quick-city-list">{filtered.map((city) => <button key={city.city_id} className={selected.includes(city.city) ? 'active' : ''} onClick={() => onToggle(city.city)} aria-pressed={selected.includes(city.city)}><span>{selected.includes(city.city) ? <Check size={13} /> : null}</span>{displayCity(city.city)}</button>)}</div>
       {filtered.length === 0 && <p className="quick-city-empty">No matching cities</p>}
@@ -275,7 +278,7 @@ function CitySummaryCard({ city, tone, score }: { city: CityBenchmark; tone: str
   return (
     <article className={`city-summary-card ${tone}`}>
       <div className="city-card-top"><div className="city-photo"><MapPin size={22} aria-hidden="true" /><img src={cityImages[city.city] ?? cityImages.Bengaluru} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} /></div><div><h2>{city.city}</h2><p>{citySubtitle(city)}</p></div></div>
-      <div className="city-stat-row"><div><strong>{display?.units ?? Number(city.gcc_sample_count).toLocaleString()}</strong><span>GCC units</span></div><b>{score.confidence}% confidence</b></div>
+      <div className="city-stat-row"><div className="city-unit-chip"><strong>{display?.units ?? Number(city.gcc_sample_count).toLocaleString()}</strong><span>GCC units</span></div><b>{score.confidence}% confidence</b></div>
       <div className="city-positioning"><IconForTone tone={tone} /><div><h3>Key positioning</h3><p>{positioningText(city, score)}</p></div></div>
     </article>
   );
@@ -293,13 +296,13 @@ function ComparisonMatrix({ cities, scoreRows, scores }: { cities: CityBenchmark
   ] as const;
   return (
     <section className="comparison-table-card">
-      <div className="city-table-scroll-hint">Swipe across to see all compared cities â†’</div>
-      <table className="city-criteria-table">
+      <div className={`city-table-scroll-hint${cities.length > 3 ? ' has-overflow' : ''}`}>Scroll across to see all compared cities &rarr;</div>
+      <table className="city-criteria-table" style={{ minWidth: `${185 + cities.length * 180}px` }}>
         <thead><tr><th>Evaluation criteria</th>{cities.map((city) => <th key={city.city_id}>{city.city}</th>)}</tr></thead>
         <tbody>
-          {scoreRows.map((row) => <tr key={row.label}><td><span><row.Icon size={16} /></span><div><strong>{row.label}</strong><small>{row.helper}</small></div></td>{row.values.map((value, index) => <td key={`${row.label}-${cities[index]?.city}`}><ScoreMeter value={value} tone={palette[index]} /></td>)}</tr>)}
+          {scoreRows.map((row) => <tr key={row.label}><td><span><row.Icon size={16} /></span><div><strong>{row.label}</strong><small>{row.helper}</small></div></td>{row.values.map((value, index) => <td key={`${row.label}-${cities[index]?.city}`}><ScoreMeter value={value} tone={palette[index % palette.length]} /></td>)}</tr>)}
           {infoRows.map(([label, getter]) => <tr key={label} className="text-row"><td><span><InfoIcon label={label} /></span><strong>{label}</strong></td>{cities.map((city) => <td key={`${label}-${city.city}`}>{getter(city)}</td>)}</tr>)}
-          <tr className="sources-row"><td><strong>Sources & confidence</strong></td>{cities.map((city, index) => <td key={city.city_id}><span>{cityDisplay[city.city]?.sources ?? splitList(city.source_ids).length} sources</span><b className={palette[index]}>{scores[index].confidence}% confidence</b></td>)}</tr>
+          <tr className="sources-row"><td><strong>Sources & confidence</strong></td>{cities.map((city, index) => <td key={city.city_id}><span>{cityDisplay[city.city]?.sources ?? splitList(city.source_ids).length} sources</span><b className={palette[index % palette.length]}>{scores[index].confidence}% confidence</b></td>)}</tr>
         </tbody>
       </table>
     </section>
@@ -308,11 +311,11 @@ function ComparisonMatrix({ cities, scoreRows, scores }: { cities: CityBenchmark
 
 function OverallComparison({ ranked, weights, onWeightChange }: { ranked: Array<{ city: CityBenchmark; score: number; tone: string }>; weights: typeof defaultWeights; onWeightChange: (key: WeightKey, value: number) => void }) {
   const [showWeights, setShowWeights] = useState(false);
-  return <section className="overall-card"><div className="rail-heading"><BarChart3 size={24} /><div><h3>Overall comparison</h3><p>Weighted score Â· out of 10</p></div></div>{ranked.map((item, index) => <div className="rank-row" key={item.city.city_id}><span className={item.tone}>{index + 1}</span><div><strong>{item.city.city}</strong><i><b className={item.tone} style={{ width: `${item.score * 10}%` }} /></i></div><em>{item.score.toFixed(1)}</em></div>)}<button className="weight-toggle" aria-expanded={showWeights} onClick={() => setShowWeights(!showWeights)}><SlidersHorizontal size={16} />Customize weights</button>{showWeights && <div className="weight-controls">{(Object.keys(weightLabels) as WeightKey[]).map((key) => <label key={key}><span>{weightLabels[key]} <b>{weights[key]}</b></span><input type="range" min="0" max="50" value={weights[key]} onChange={(event) => onWeightChange(key, Number(event.target.value))} /></label>)}<p>Scores are normalized to the total weight.</p></div>}</section>;
+  return <section className="overall-card"><div className="rail-heading"><BarChart3 size={24} /><div><h3>Overall comparison</h3><p>Weighted score &middot; out of 10</p></div></div>{ranked.map((item, index) => <div className="rank-row" key={item.city.city_id}><span className={item.tone}>{index + 1}</span><div><strong>{item.city.city}</strong><i><b className={item.tone} style={{ width: `${item.score * 10}%` }} /></i></div><em>{item.score.toFixed(1)}</em></div>)}<button className="weight-toggle" aria-expanded={showWeights} onClick={() => setShowWeights(!showWeights)}><SlidersHorizontal size={16} />Customize weights</button>{showWeights && <div className="weight-controls">{(Object.keys(weightLabels) as WeightKey[]).map((key) => <label key={key}><span>{weightLabels[key]} <b>{weights[key]}</b></span><input type="range" min="0" max="50" value={weights[key]} onChange={(event) => onWeightChange(key, Number(event.target.value))} /></label>)}<p>Scores are normalized to the total weight.</p></div>}</section>;
 }
 
 function Insights({ cities, scores }: { cities: CityBenchmark[]; scores: ReturnType<typeof cityScore>[] }) {
-  return <section className="city-insights-card"><h3>Insights</h3>{cities.map((city, index) => <div className="insight-row" key={city.city_id}><span className={palette[index]}><IconForTone tone={palette[index]} /></span><p>{insightText(city, scores[index])}</p></div>)}</section>;
+  return <section className="city-insights-card"><h3>Insights</h3>{cities.map((city, index) => <div className="insight-row" key={city.city_id}><span className={palette[index % palette.length]}><IconForTone tone={palette[index % palette.length]} /></span><p>{insightText(city, scores[index])}</p></div>)}</section>;
 }
 
 function ScoreMeter({ value, tone }: { value: number; tone: string }) {

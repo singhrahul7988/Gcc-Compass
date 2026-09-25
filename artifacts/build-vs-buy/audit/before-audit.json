@@ -1,0 +1,194 @@
+{
+  "screenshots": [
+    [
+      "assumptions",
+      "before-default-wide.png"
+    ],
+    [
+      "cost",
+      "before-cost-wide.png"
+    ],
+    [
+      "timeline",
+      "before-timeline-wide.png"
+    ],
+    [
+      "sources",
+      "before-sources-wide.png"
+    ]
+  ],
+  "scenarios": {
+    "default": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "city_hyderabad": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Hyderabad \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "small_team_40": {
+      "route": "EOR / Flexiple-managed team",
+      "rationale": "Start hiring quickly while a local partner handles employment administration and early operations.",
+      "costMetric": "~38% lower",
+      "city": "40 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "large_team_600": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "600 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "urgent_timeline": {
+      "route": "EOR / Flexiple-managed team",
+      "rationale": "Start hiring quickly while a local partner handles employment administration and early operations.",
+      "costMetric": "~38% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 < 3 months target",
+      "selected": [
+        "Selected"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "long_timeline": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 12+ months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "ai_mix_60": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "partner_unchecked": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "office_checked": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "scale_checked": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "ip_checked": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "control_priority": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "select_eor_card": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "get_recommendation": {
+      "route": "BOT / Managed Offshore Team",
+      "rationale": "A partner can launch and operate the team while you retain more control than an EOR, with a clear path to scale.",
+      "costMetric": "~24% lower",
+      "city": "200 people \u00b7 Bengaluru \u00b7 3 \u2013 6 months target",
+      "selected": [
+        "Selected (Recommended)"
+      ],
+      "tableRows": 5,
+      "pageWidth": 1920,
+      "viewport": 1920
+    },
+    "closed_details_visible": false,
+    "reopened_details_visible": true,
+    "view_all_sources_tab": "true"
+  },
+  "mobileWidth": 390
+}
