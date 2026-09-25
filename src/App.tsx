@@ -17,7 +17,7 @@ const navItems = [
 type Page = (typeof navItems)[number][0];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>('overview');
+  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : 'overview');
 
   return (
     <div className="app-shell">
@@ -57,7 +57,7 @@ export default function App() {
         ) : activePage === 'atlas' ? (
           <GccAtlas records={gccRecords} />
         ) : activePage === 'cities' ? (
-          <CityCompare cities={cityBenchmarks} policies={statePolicies} />
+          <CityCompare cities={cityBenchmarks} policies={statePolicies} onOpenAnalyst={() => setActivePage('analyst')} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>

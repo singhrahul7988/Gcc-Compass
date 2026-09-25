@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowRight,
   ArrowUp,
   BadgeIndianRupee,
@@ -7,7 +7,6 @@
   Download,
   ExternalLink,
   FileText,
-  Info,
   Layers3,
   MapPinned,
   Play,
@@ -120,16 +119,14 @@ export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: 
               <span className="metric-symbol"><Icon size={25} /></span>
               <div className="metric-copy">
                 <div className="metric-title-row">
-                  <h3>{label}</h3>
-                  <Info size={14} />
+                  <h3>{label} <span className="metric-detail">({detail})</span></h3>
                 </div>
-                <span className="metric-detail">{detail}</span>
                 <strong>{item?.value_or_range ?? 'Unknown'}</strong>
                 <p><ArrowUp size={13} />{growth}<span>vs. 2023</span></p>
               </div>
             </div>
-            <div className="mini-bars" role="img" aria-label={`${label} growth trend, ${growth} versus 2023`}><span className="mini-bars-axis" />{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ height: `${24 + index * 5}%` }} />)}<em>3Y trend</em></div>
-            <div className="metric-footer-row"><span className="metric-source">Source: {source}</span><b>{item?.confidence_score ?? 0}% confidence</b></div>
+            <div className="mini-bars" aria-hidden="true">{Array.from({ length: 9 }, (_, index) => <i key={index} style={{ height: `${30 + index * 8}%` }} />)}</div>
+            <div className="metric-footer-row"><span className="metric-source" title={`Source: ${source}`}>Source: {source}</span><small className="metric-confidence">{item?.confidence_score ?? 0}% confidence</small></div>
           </article>
         ))}
       </div>
