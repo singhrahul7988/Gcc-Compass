@@ -21,7 +21,7 @@
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import { AttributionControl, MapContainer, Marker, TileLayer, Tooltip, ZoomControl, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, Tooltip, ZoomControl, useMapEvents } from 'react-leaflet';
 import hyderabadImage from '../assets/cities/hyderabad.jpg';
 import puneImage from '../assets/cities/pune-unsplash.jpg';
 import { CityBenchmark, StatePolicy } from '../data';
@@ -223,16 +223,16 @@ export function CityCompare({ cities, policies, onOpenAnalyst }: CityCompareProp
 
 function CityMap({ cities, selected, onToggle }: { cities: CityBenchmark[]; selected: string[]; onToggle: (city: string) => void }) {
   const [zoomLevel, setZoomLevel] = useState(4);
+  const mapRef = useRef<L.Map | null>(null);
   return (
     <section className="city-map-card" aria-label="Interactive map of Indian GCC cities">
       <div className="city-map-heading"><span className="india-flag" /> India <span>Explore cities</span></div>
-      <MapContainer className="city-embedded-map" bounds={indiaBounds} boundsOptions={{ padding: [12, 12] }}
+      <MapContainer ref={mapRef} className="city-embedded-map" bounds={indiaBounds} boundsOptions={{ padding: [12, 12] }}
         maxBounds={[[5, 65], [36, 92]]} maxBoundsViscosity={0.75} minZoom={4} maxZoom={10}
         scrollWheelZoom zoomControl={false} attributionControl={false}>
         <CityMapZoomObserver onZoom={setZoomLevel} />
         <ZoomControl position="topright" />
-        <AttributionControl position="bottomright" prefix={false} />
-        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution={'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'} />
+        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {cities.map((city) => {
           const coordinates = cityCoordinates[city.city];
           if (!coordinates) return null;
@@ -249,7 +249,10 @@ function CityMap({ cities, selected, onToggle }: { cities: CityBenchmark[]; sele
           </Marker>;
         })}
       </MapContainer>
-      <div className="city-map-hint">Scroll to zoom · Click pins</div>
+      <div className="city-map-footer">
+        <button type="button" className="city-map-hint" onClick={() => mapRef.current?.zoomIn()}>Click to zoom</button>
+        <a className="city-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+      </div>
     </section>
   );
 }

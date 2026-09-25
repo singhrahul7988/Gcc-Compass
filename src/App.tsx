@@ -1,10 +1,14 @@
-﻿import { useState } from 'react';
-import { BarChart3, Bell, Building2, Calculator, Command, Map, Network, Search, Sparkles } from 'lucide-react';
+﻿import { useEffect, useRef, useState } from 'react';
+import { BarChart3, Bell, Building2, Calculator, Command, KeyRound, Map, Network, Search, Sparkles } from 'lucide-react';
 import { CityCompare } from './components/CityCompare';
 import { BuildVsBuy } from './components/BuildVsBuy';
 import { GccAtlas } from './components/GccAtlas';
 import { MarketSnapshot } from './components/MarketSnapshot';
-import { assumptions, cityBenchmarks, dataStats, gccRecords, statePolicies } from './data';
+import { AiAnalyst } from './components/AiAnalyst';
+import { AiSettings } from './components/AiSettings';
+import { getAiStatus } from './components/aiClient';
+import type { AiStatus } from './components/aiClient';
+import { assumptions, cityBenchmarks, dataStats, gccRecords, stakeholders, statePolicies } from './data';
 
 const navItems = [
   ['overview', 'Overview', BarChart3],
@@ -18,23 +22,43 @@ const navItems = [
 type Page = (typeof navItems)[number][0];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : 'overview');
+  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : location.hash.startsWith('#analyst') ? 'analyst' : 'overview');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState<AiStatus>({ configured: false, provider: null, model: null });
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getAiStatus().then(setAiStatus).catch(() => setAiStatus({ configured: false, provider: null, model: null }));
+  }, []);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!profileRef.current?.contains(event.target as Node)) setProfileOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [profileOpen]);
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <button className="brand brand-button" onClick={() => setActivePage('overview')} aria-label="GCC Compass home">
           <span className="brand-mark" aria-hidden="true"><i /></span>
-          <div>
-            <strong>GCC Compass</strong>
-            <small>by Flexiple</small>
-          </div>
+          <div><strong>GCC Compass</strong><small>by Flexiple</small></div>
         </button>
         <nav>
           {navItems.map(([page, label, Icon]) => (
             <button className={activePage === page ? 'active' : ''} onClick={() => setActivePage(page)} key={page}>
-              <Icon size={16} />
-              {label}
+              <Icon size={16} />{label}
             </button>
           ))}
         </nav>
@@ -44,14 +68,17 @@ export default function App() {
             <input placeholder="Search companies, cities, insights..." />
             <kbd><Command size={12} /> K</kbd>
           </label>
-          <button className="nav-icon-button" aria-label="Notifications">
-            <Bell size={19} />
-            <span />
-          </button>
-          <button className="avatar-button" aria-label="User profile">RS</button>
+          <button className="nav-icon-button" aria-label="Notifications"><Bell size={19} /><span /></button>
+          <div className="profile-control" ref={profileRef}>
+            <button className="avatar-button" aria-label="User profile" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen(open => !open)}>RS</button>
+            {profileOpen && <div className="profile-menu" role="menu">
+              <div className="profile-menu-heading"><strong>Profile</strong><span>{aiStatus.configured ? 'Live AI ready' : 'Local analysis'}</span></div>
+              <button role="menuitem" type="button" onClick={() => { setSettingsOpen(true); setProfileOpen(false); }}><KeyRound size={18} /><span><strong>Manage API keys</strong><small>Connect OpenAI for live analysis</small></span></button>
+              <button role="menuitem" type="button" onClick={() => { setActivePage('analyst'); setProfileOpen(false); }}><Sparkles size={18} /><span><strong>Open AI Analyst</strong><small>Ask an evidence-backed question</small></span></button>
+            </div>}
+          </div>
         </div>
       </header>
-
       <main>
         {activePage === 'overview' ? (
           <MarketSnapshot assumptions={assumptions} recordCount={gccRecords.length} cities={cityBenchmarks} dataStats={dataStats} />
@@ -61,6 +88,8 @@ export default function App() {
           <CityCompare cities={cityBenchmarks} policies={statePolicies} onOpenAnalyst={() => setActivePage('analyst')} />
         ) : activePage === 'build' ? (
           <BuildVsBuy cities={cityBenchmarks} assumptions={assumptions} />
+        ) : activePage === 'analyst' ? (
+          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiModel={aiStatus.model} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>
@@ -69,6 +98,8 @@ export default function App() {
           </section>
         )}
       </main>
+      {settingsOpen && <AiSettings status={aiStatus} onStatusChange={setAiStatus} onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
+

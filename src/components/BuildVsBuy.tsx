@@ -320,14 +320,6 @@ export function BuildVsBuy({ cities, assumptions }: Props) {
             <ul className="build-fit-list risks">{splitHighlights(selectedCity.risks).map(item => <li key={item}>{item}</li>)}</ul>
           </div>
           <div className="build-fit-row">
-            <h3>Team mix</h3>
-            <div className="build-fit-mix">
-              {(['Engineering / Product', 'Data / AI', 'G&A / Support'] as const).map((label, index) =>
-                <span key={label}><strong>{mix[index]}%</strong> {label}</span>,
-              )}
-            </div>
-          </div>
-          <div className="build-fit-row">
             <h3>Role insight</h3>
             <p className="build-fit-insight">{model.roleFit}</p>
           </div>
