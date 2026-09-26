@@ -2,6 +2,8 @@
 
 A React and TypeScript application for exploring India's GCC landscape, comparing cities, evaluating setup options, researching with the AI Analyst, and discovering ecosystem partners and opportunities.
 
+![GCC Compass Overview dashboard with market metrics, city hubs, the India map, source verification, and recent developments](assets/readme/overview.png)
+
 ## Requirements
 
 Use Node.js 22.12 or newer and npm. Commit the package lockfile and use npm ci for reproducible installs.
@@ -50,4 +52,4 @@ node --test server/*.test.mjs
 node scripts/verify_opportunity_data.mjs
 ~~~
 
-With the development server running, browser checks are available in scripts/verify_ecosystem.mjs, scripts/verify_opportunities.mjs, scripts/verify_ecosystem_dropdowns.mjs, and scripts/verify_header_navigation.mjs. These browser scripts currently use a local Chrome installation at the Windows path declared in each script. Screenshots are regenerated under the ignored artifacts/ directory.
+With the development server running, browser checks are available in scripts/verify_ecosystem.mjs, scripts/verify_opportunities.mjs, scripts/verify_ecosystem_dropdowns.mjs, scripts/verify_header_navigation.mjs, and scripts/verify_page_navigation.mjs. The page-navigation check covers cross-page buttons, URLs, browser history, shared comparisons, and mobile navigation without generating screenshots. These browser scripts currently use a local Chrome installation at the Windows path declared in each script. Screenshots are regenerated under the ignored artifacts/ directory.

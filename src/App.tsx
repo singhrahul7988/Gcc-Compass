@@ -22,8 +22,14 @@ const navItems = [
 
 type Page = (typeof navItems)[number][0];
 
+function pageFromHash(hash: string): Page {
+  const name = hash.slice(1).split(/[/?=]/)[0];
+  return navItems.find(([page]) => page === name)?.[0] ?? 'overview';
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : location.hash.startsWith('#analyst') ? 'analyst' : location.hash.startsWith('#ecosystem') ? 'ecosystem' : 'overview');
+  const [route, setRoute] = useState(() => location.hash);
+  const activePage = pageFromHash(route);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<AiStatus>({ configured: false, provider: null, model: null, saved: [], searchConfigured: false });
@@ -41,6 +47,20 @@ export default function App() {
     observer.observe(header);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const syncRoute = () => setRoute(location.hash);
+    window.addEventListener('hashchange', syncRoute);
+    window.addEventListener('popstate', syncRoute);
+    return () => {
+      window.removeEventListener('hashchange', syncRoute);
+      window.removeEventListener('popstate', syncRoute);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [route]);
 
   useEffect(() => {
     getAiStatus().then(setAiStatus).catch(() => setAiStatus({ configured: false, provider: null, model: null, saved: [], searchConfigured: false }));
@@ -62,12 +82,15 @@ export default function App() {
     };
   }, [profileOpen]);
 
+  const navigate = (hash: string) => {
+    if (location.hash !== hash) history.pushState(null, '', hash);
+    setRoute(hash);
+  };
+
   const openPage = (page: Page) => {
-    setActivePage(page);
-    if (page === 'ecosystem') {
-      if (!location.hash.startsWith('#ecosystem')) history.replaceState(null, '', '#ecosystem');
-    }
-    else if (location.hash.startsWith('#ecosystem')) history.replaceState(null, '', location.pathname + location.search);
+    // Keep the current comparison or Ecosystem section when reselecting its header tab.
+    if (page === activePage) return;
+    navigate(`#${page}`);
   };
 
   return (
@@ -77,9 +100,9 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true"><i /></span>
           <div><strong>GCC Compass</strong><small>by Flexiple</small></div>
         </button>
-        <nav>
+        <nav aria-label="Main navigation">
           {navItems.map(([page, label, Icon]) => (
-            <button className={activePage === page ? 'active' : ''} onClick={() => openPage(page)} key={page}>
+            <button className={activePage === page ? 'active' : ''} aria-current={activePage === page ? 'page' : undefined} onClick={() => openPage(page)} key={page}>
               <Icon size={16} />{label}
             </button>
           ))}
@@ -102,17 +125,17 @@ export default function App() {
       </header>
       <main>
         {activePage === 'overview' ? (
-          <MarketSnapshot assumptions={assumptions} recordCount={gccRecords.length} cities={cityBenchmarks} dataStats={dataStats} />
+          <MarketSnapshot assumptions={assumptions} recordCount={gccRecords.length} cities={cityBenchmarks} dataStats={dataStats} onOpenCityCompare={() => openPage('cities')} onOpenOpportunities={() => navigate('#ecosystem/opportunities')} />
         ) : activePage === 'atlas' ? (
-          <GccAtlas records={gccRecords} />
+          <GccAtlas records={gccRecords} onOpenAnalyst={() => openPage('analyst')} />
         ) : activePage === 'cities' ? (
-          <CityCompare cities={cityBenchmarks} policies={statePolicies} onOpenAnalyst={() => setActivePage('analyst')} />
+          <CityCompare key={route} cities={cityBenchmarks} policies={statePolicies} onOpenAnalyst={() => openPage('analyst')} />
         ) : activePage === 'build' ? (
           <BuildVsBuy cities={cityBenchmarks} assumptions={assumptions} />
         ) : activePage === 'analyst' ? (
-          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiProvider={aiStatus.provider} aiModel={aiStatus.model} searchConfigured={aiStatus.searchConfigured} connectionRevision={aiStatus.revision} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
+          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiProvider={aiStatus.provider} aiModel={aiStatus.model} searchConfigured={aiStatus.searchConfigured} connectionRevision={aiStatus.revision} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => openPage('cities')} onOpenBuildVsBuy={() => openPage('build')} />
         ) : activePage === 'ecosystem' ? (
-          <Ecosystem stakeholders={stakeholders} records={gccRecords} />
+          <Ecosystem stakeholders={stakeholders} records={gccRecords} section={route.startsWith('#ecosystem/opportunities') ? 'opportunities' : 'partners'} onOpenSection={section => navigate(section === 'opportunities' ? '#ecosystem/opportunities' : '#ecosystem')} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>

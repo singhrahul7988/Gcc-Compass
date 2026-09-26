@@ -12,13 +12,17 @@ type Modal = { kind: 'profile'; partner: EcosystemPartner } | { kind: 'claim' } 
 const PAGE_SIZE = 6;
 const CLAIM_DRAFT_KEY = 'gcc-compass-partner-claim-draft';
 
-export function Ecosystem({ stakeholders, records }: { stakeholders: Stakeholder[]; records: GccRecord[] }) {
-  const [section, setSection] = useState<'partners' | 'opportunities'>(() => location.hash.startsWith('#ecosystem/opportunities') ? 'opportunities' : 'partners');
+type EcosystemSection = 'partners' | 'opportunities';
+
+type EcosystemProps = {
+  stakeholders: Stakeholder[];
+  records: GccRecord[];
+  section: EcosystemSection;
+  onOpenSection: (section: EcosystemSection) => void;
+};
+
+export function Ecosystem({ stakeholders, records, section, onOpenSection: openSection }: EcosystemProps) {
   const isOpportunities = section === 'opportunities';
-  const openSection = (next: 'partners' | 'opportunities') => {
-    setSection(next);
-    history.replaceState(null, '', next === 'opportunities' ? '#ecosystem/opportunities' : '#ecosystem');
-  };
   const opportunityLink = <button className={isOpportunities ? 'selected' : ''} aria-current={isOpportunities ? 'page' : undefined} onClick={() => openSection('opportunities')}><BriefcaseBusiness size={22} /><span>Opportunities</span></button>;
   const partners = useMemo(() => ecosystemPartners(stakeholders), [stakeholders]);
   const [query, setQuery] = useState('');
@@ -97,7 +101,7 @@ export function Ecosystem({ stakeholders, records }: { stakeholders: Stakeholder
           </nav>
         </footer>
       </section>}
-      {modal && <PartnerDialog modal={modal} partners={partners} onClose={() => setModal(null)} onClaim={() => setModal({ kind: 'claim' })} />}
+      {modal && <PartnerDialog modal={modal} partners={partners} onClose={() => setModal(null)} onClaim={() => setModal({ kind: 'claim' })} onBackToPartners={() => { setModal(null); openSection('partners'); }} />}
     </div>
   );
 }
@@ -133,7 +137,7 @@ function PartnerCard({ partner, onOpen }: { partner: EcosystemPartner; onOpen: (
   </article>;
 }
 
-function PartnerDialog({ modal, partners, onClose, onClaim }: { modal: Modal; partners: EcosystemPartner[]; onClose: () => void; onClaim: () => void }) {
+function PartnerDialog({ modal, partners, onClose, onClaim, onBackToPartners }: { modal: Modal; partners: EcosystemPartner[]; onClose: () => void; onClaim: () => void; onBackToPartners: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const [draft, setDraft] = useState(() => {
@@ -148,7 +152,7 @@ function PartnerDialog({ modal, partners, onClose, onClaim }: { modal: Modal; pa
     <header><h2 id="ecosystem-dialog-title">{title}</h2><button autoFocus aria-label="Close partner dialog" onClick={onClose}><X size={21} /></button></header>
     {modal.kind === 'profile' && <div className="ecosystem-profile-body"><div className="ecosystem-profile-overview"><PartnerLogo partner={modal.partner} /><div><p>{modal.partner.type}</p><EvidenceBadge claimed={modal.partner.claimed} /></div></div><h3>Cities supported</h3><p>{modal.partner.cities.join(', ')}</p><h3>Services</h3><div className="ecosystem-service-tags">{modal.partner.services.map(service => <span key={service}>{service}</span>)}</div><h3>Evidence</h3><p className="ecosystem-profile-proof"><FileText size={19} />{modal.partner.proof}</p>{modal.partner.website && <a href={modal.partner.website} target="_blank" rel="noreferrer">Visit company website <ArrowRight size={15} /></a>}<button className="ecosystem-primary" onClick={onClaim}><UserRoundPlus size={19} />Claim your profile</button></div>}
     {modal.kind === 'help' && <div className="ecosystem-help-body"><p>Find the right partners for your GCC, and inspect the evidence behind their profiles.</p><ol><li><strong>Discover partners.</strong> Search by organization, city, or service and narrow the results with filters.</li><li><strong>Inspect their profiles.</strong> Review services, locations, and the source named in each proof point. Claimed profiles are managed by their organizations; source-backed profiles are compiled from published information.</li><li><strong>Get discovered.</strong> Start a profile claim to add your organization’s services and evidence.</li></ol><button className="ecosystem-primary" onClick={onClaim}>Claim your profile <ArrowRight size={16} /></button></div>}
-    {modal.kind === 'workspace' && <div className="ecosystem-help-body"><p>{modal.title} is coming soon.</p><p>You can explore partner profiles and save a profile claim draft today.</p><button className="ecosystem-primary" onClick={onClose}>Back to Explore partners</button></div>}
+    {modal.kind === 'workspace' && <div className="ecosystem-help-body"><p>{modal.title} is coming soon.</p><p>You can explore partner profiles and save a profile claim draft today.</p><button className="ecosystem-primary" onClick={onBackToPartners}>Back to Explore partners</button></div>}
     {modal.kind === 'claim' && <form className="ecosystem-claim-form" onSubmit={event => { event.preventDefault(); try { localStorage.setItem(CLAIM_DRAFT_KEY, JSON.stringify(draft)); setDraftSaved(true); setDraftError(''); } catch { setDraftError('Your browser could not save the draft. Please allow local storage and try again.'); } }}><p>Help GCC buyers discover your organization. Save a claim draft with your company and contact details.</p><label>Organization<input required list="ecosystem-organizations" value={draft.organization} onChange={event => { setDraft({ ...draft, organization: event.target.value }); setDraftSaved(false); }} placeholder="Your organization" /><datalist id="ecosystem-organizations">{partners.map(partner => <option key={partner.id} value={partner.name} />)}</datalist></label><label>Your name<input required value={draft.name} onChange={event => { setDraft({ ...draft, name: event.target.value }); setDraftSaved(false); }} autoComplete="name" placeholder="Full name" /></label><label>Work email<input required type="email" value={draft.email} onChange={event => { setDraft({ ...draft, email: event.target.value }); setDraftSaved(false); }} autoComplete="email" placeholder="you@company.com" /></label><small>Your draft is saved in this browser. It has not been submitted for verification.</small>{draftSaved && <p className="ecosystem-draft-saved" role="status"><CheckCircle2 size={19} />Your profile claim draft has been saved.</p>}{draftError && <p role="alert">{draftError}</p>}<button className="ecosystem-primary" type="submit">Save claim draft <ArrowRight size={16} /></button></form>}
   </dialog>;
 }

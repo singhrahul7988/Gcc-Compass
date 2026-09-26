@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   UsersRound,
 } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { Assumption, CityBenchmark, dataStats as statsShape, gccRecords, stakeholders, statePolicies } from '../data';
 import { score, splitList } from '../data/csv';
 import { CompanyLogo } from './CompanyLogo';
@@ -23,6 +24,8 @@ type MarketSnapshotProps = {
   recordCount: number;
   cities: CityBenchmark[];
   dataStats: typeof statsShape;
+  onOpenCityCompare: () => void;
+  onOpenOpportunities: () => void;
 };
 
 type MetricConfig = {
@@ -76,7 +79,12 @@ const recentUpdates = [
   { date: '12 Sep 2026', category: 'New GCC', text: 'Hexadex launches a global capability centre in India', url: 'https://punegcc.com/hexadex-launches-global-capability-centre-in-india-strengthening-global-capabilities/' },
 ];
 
-export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: MarketSnapshotProps) {
+export function MarketSnapshot({ assumptions, recordCount, cities, dataStats, onOpenCityCompare, onOpenOpportunities }: MarketSnapshotProps) {
+  const openCityCompare = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onOpenCityCompare();
+  };
   const metricCards = metricConfig.map((config) => ({
     ...config,
     item: assumptions.find((assumption) => assumption.assumption_id === config.id),
@@ -139,7 +147,7 @@ export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: 
             <div>
               <h2>India has scale, but the data is fragmented.</h2>
               <p>India's GCC ecosystem is large and growing, with 2,000+ companies and 3,700+ delivery units, but information is scattered across reports, news, filings, and directories with varying levels of reliability. GCC Compass unifies and verifies this data to help you make confident, faster decisions.</p>
-              <div className="insight-actions"><a href="#" className="primary-action">Explore Cities <ArrowRight size={17} /></a><button className="video-action"><span><Play size={15} fill="currentColor" /></span>Watch 2 min overview</button></div>
+              <div className="insight-actions"><a href="#cities" onClick={openCityCompare} className="primary-action">Explore Cities <ArrowRight size={17} /></a><button className="video-action"><span><Play size={15} fill="currentColor" /></span>Watch 2 min overview</button></div>
             </div>
             <ul className="trust-bullets reference-trust-bullets">
               <li><CheckCircle2 size={17} />Consolidated from <strong>50+ trusted sources</strong></li>
@@ -150,7 +158,7 @@ export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: 
           </div>
         </article>
           <article className="hub-table-card reference-hub-card">
-          <div className="panel-head"><div><h2><FileText size={20} />Top GCC Hubs by Scale</h2><p>GCC units, talent and key companies</p></div><a href="#">View all cities <ArrowRight size={15} /></a></div>
+          <div className="panel-head"><div><h2><FileText size={20} />Top GCC Hubs by Scale</h2><p>GCC units, talent and key companies</p></div><a href="#cities" onClick={openCityCompare}>View all cities <ArrowRight size={15} /></a></div>
           <div className="hub-table-wrap">
   <table className="hub-table">
     <colgroup>
@@ -204,7 +212,7 @@ export function MarketSnapshot({ assumptions, recordCount, cities, dataStats }: 
           </div>
         </article>
           <article className="developments-card reference-developments-card">
-          <div className="panel-head"><div><h2><FileText size={20} />Recent Developments</h2></div><button>View all updates <ArrowRight size={15} /></button></div>
+          <div className="panel-head"><div><h2><FileText size={20} />Recent Developments</h2></div><button onClick={onOpenOpportunities}>View opportunities <ArrowRight size={15} /></button></div>
           <div className="updates-list">{recentUpdates.map(({ date, category, text, url }) => <div className="update-row" key={`${date}-${text}`}><span>{date}</span><b className={category.toLowerCase().replace(/\s+/g, '-')}>{category}</b><p>{text}</p><a href={url} target="_blank" rel="noreferrer" aria-label={`Open evidence for: ${text}`} title="Open evidence"><ExternalLink size={15} /></a></div>)}</div>
         </article>
         </div>

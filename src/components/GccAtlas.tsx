@@ -29,6 +29,7 @@ import { CompanyLogo } from './CompanyLogo';
 
 type GccAtlasProps = {
   records: GccRecord[];
+  onOpenAnalyst: () => void;
 };
 
 type Tab = 'overview' | 'sources' | 'verification' | 'insights' | 'related';
@@ -93,7 +94,7 @@ const companyDomains: Record<string, string> = {
   Shell: 'shell.com',
 };
 
-export function GccAtlas({ records }: GccAtlasProps) {
+export function GccAtlas({ records, onOpenAnalyst }: GccAtlasProps) {
   const [query, setQuery] = useState('');
   const [city, setCity] = useState('All cities');
   const [sector, setSector] = useState('All sectors');
@@ -219,7 +220,7 @@ export function GccAtlas({ records }: GccAtlasProps) {
         </div>
 
         <aside className="atlas-detail-panel">
-          {selected ? <AtlasDetail record={selected} activeTab={activeTab} setActiveTab={setActiveTab} relatedRecords={relatedRecords} onSelectRelated={selectRecord} /> : <p className="empty-state">Select a company to inspect its source-linked dossier.</p>}
+          {selected ? <AtlasDetail record={selected} activeTab={activeTab} setActiveTab={setActiveTab} relatedRecords={relatedRecords} onSelectRelated={selectRecord} onOpenAnalyst={onOpenAnalyst} /> : <p className="empty-state">Select a company to inspect its source-linked dossier.</p>}
         </aside>
       </div>
     </section>
@@ -247,7 +248,7 @@ function AtlasRow({ index, record, selected, onSelect }: { index: number; record
   );
 }
 
-function AtlasDetail({ record, activeTab, setActiveTab, relatedRecords, onSelectRelated }: { record: GccRecord; activeTab: Tab; setActiveTab: (tab: Tab) => void; relatedRecords: GccRecord[]; onSelectRelated: (record: GccRecord) => void }) {
+function AtlasDetail({ record, activeTab, setActiveTab, relatedRecords, onSelectRelated, onOpenAnalyst }: { record: GccRecord; activeTab: Tab; setActiveTab: (tab: Tab) => void; relatedRecords: GccRecord[]; onSelectRelated: (record: GccRecord) => void; onOpenAnalyst: () => void }) {
   const display = getDisplayRecord(record);
   const confidence = display.confidence;
   const sources = getSources(record);
@@ -274,7 +275,7 @@ function AtlasDetail({ record, activeTab, setActiveTab, relatedRecords, onSelect
         {activeTab === 'related' ? <RelatedPanel records={relatedRecords} onSelect={onSelectRelated} /> : null}
       </div>
 
-      <div className="atlas-detail-actions"><button onClick={() => setActiveTab('insights')}><Sparkles size={16} />Open in AI Analyst</button><button onClick={openCorrection}><Flag size={16} />Submit a correction</button></div>
+      <div className="atlas-detail-actions"><button onClick={onOpenAnalyst}><Sparkles size={16} />Open in AI Analyst</button><button onClick={openCorrection}><Flag size={16} />Submit a correction</button></div>
     </>
   );
 }
