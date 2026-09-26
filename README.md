@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ~~~
 
-Open http://127.0.0.1:5173. The Vite development server also mounts the AI API.
+Open http://127.0.0.1:5173. The Vite development server also mounts the AI API. Local development, preview, and production commands automatically load .env when it exists.
 
 ## Deploy to Vercel
 
@@ -29,13 +29,21 @@ npm run build
 npm start
 ~~~
 
-The production server serves dist/ and the AI API at http://127.0.0.1:4173 by default. Set HOST and PORT in the deployment environment when needed. For a local environment file, copy .env.example to .env and run:
+The production server serves dist/ and the AI API at http://127.0.0.1:4173 by default. Set HOST and PORT in the deployment environment when needed. For a local environment file, copy .env.example to .env. npm start loads it automatically; you can also run:
 
 ~~~sh
 node --env-file=.env server/index.mjs
 ~~~
 
 Optional AI and research providers are configured through the application's AI Analyst settings.
+
+Check your actual Redis credentials without using paid AI APIs:
+
+~~~sh
+npm run check:redis
+~~~
+
+The check writes synthetic encrypted sessions, verifies persistence and concurrent saves, and removes its test data.
 
 ## Repository contents
 
