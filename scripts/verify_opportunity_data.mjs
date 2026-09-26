@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
-const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+const server = await createServer({
+  server: { middlewareMode: true },
+  appType: 'custom',
+  // This verifier loads server modules only; a browser dependency scan is unnecessary.
+  optimizeDeps: { noDiscovery: true, include: [] },
+});
 try {
   const { buildOpportunities, reportedTeam, teamBand, activityDate } = await server.ssrLoadModule('/src/components/opportunityData.ts');
   const { gccRecords } = await server.ssrLoadModule('/src/data/index.ts');
