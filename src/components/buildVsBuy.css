@@ -1,0 +1,143 @@
+/* Extend the header palette, reserving lemon for the recommendation and selection. */
+.build-screen {
+  --build-ink: #20382b;
+  --build-muted: #58675d;
+  --build-line: #dce5d9;
+  --build-soft: #f5f8f1;
+  color: var(--build-ink);
+}
+body:has(main .build-screen) { background: #f6f8f3; }
+.build-screen .build-intro p { padding-left: 9px; border-left: 3px solid var(--flexiple-lime); color: var(--flexiple-green); font-size: 11px; letter-spacing: .065em; }
+.build-screen .build-intro h1,
+.build-screen .build-section-heading h2,
+.build-screen .build-reasons h2,
+.build-screen .build-route-top h3,
+.build-screen .build-field > label:first-child { color: var(--flexiple-forest); }
+.build-screen .build-intro > span { color: var(--build-muted); }
+.build-screen .build-controls,
+.build-screen .build-reasons > div,
+.build-screen .build-route-card,
+.build-screen .build-details { border-color: var(--build-line); box-shadow: none; }
+.build-screen .build-controls { box-shadow: 0 4px 18px #082c1c05; }
+.build-screen .build-field > label:first-child svg { color: #73816d; }
+.build-screen .build-city-trigger,
+.build-screen .build-range-with-value input[type=number],
+.build-screen .build-quote input[type=number] { border-color: var(--build-line); color: var(--build-ink); }
+.build-screen .build-city-trigger .build-city-icon,
+.build-screen .build-city-option-icon,
+.build-screen .build-city-tag,
+.build-screen .build-fit-card h2 small { color: var(--flexiple-forest); background: var(--flexiple-lime-soft); }
+.build-screen .build-city-option:hover,
+.build-screen .build-city-option.active { background: var(--flexiple-lime-soft); }
+.build-screen .build-city-trigger:hover,
+.build-screen .build-city-trigger[aria-expanded=true] { border-color: var(--flexiple-green); }
+.build-screen .build-city-option,
+.build-screen .build-city-trigger > svg { color: var(--build-ink); }
+.build-screen .build-range-ends,
+.build-screen .build-mix-row,
+.build-screen .build-check-row { color: var(--build-muted); }
+.build-screen .build-mix-row output { color: var(--flexiple-forest); background: var(--build-soft); }
+.build-screen .build-controls input[type=range]::-webkit-slider-thumb { background: var(--flexiple-forest); box-shadow: 0 0 0 3px var(--flexiple-lime-soft); }
+.build-screen .build-controls input[type=range]::-moz-range-thumb { background: var(--flexiple-forest); box-shadow: 0 0 0 3px var(--flexiple-lime-soft); }
+.build-screen .build-check-row input { accent-color: var(--flexiple-forest); }
+.build-screen .build-segments button,
+.build-screen .build-priority button { color: var(--build-muted); background: var(--build-soft); }
+.build-screen .build-segments button.active,
+.build-screen .build-priority button.active { border-color: var(--flexiple-forest); color: #fff; background: var(--flexiple-forest); box-shadow: none; }
+.build-screen .build-priority button.active svg { color: var(--flexiple-lime); }
+.build-screen .build-priority button.active small { color: #d8e3d4; }
+.build-screen .build-submit { color: var(--flexiple-forest); background: var(--flexiple-lime); }
+.build-screen .build-submit:hover { background: #bfe164; }
+.build-screen .build-recommendation { border-color: var(--flexiple-forest); background: var(--flexiple-forest); box-shadow: 0 8px 24px #082c1c0c; scroll-margin-top: 90px; }
+.build-screen .build-skyline {
+  width: 44%;
+  background-image:
+    linear-gradient(90deg, #082c1c 0%, #082c1cb3 22%, #082c1c24 75%),
+    linear-gradient(0deg, #082c1c 0%, #082c1c22 50%),
+    var(--build-city-photo, url('../assets/build-bengaluru.jpg'));
+  opacity: .8;
+}
+.build-screen .build-skyline.abstract { background-image: none !important; }
+.build-screen .build-kicker { gap: 7px; color: var(--flexiple-lime); }
+.build-screen .build-kicker span { padding: 5px 8px; color: var(--flexiple-forest); background: var(--flexiple-lime); letter-spacing: .04em; }
+.build-screen .build-hero-copy h2 { color: #fff; }
+.build-screen .build-hero-subtitle { color: #d6e2d5; }
+.build-screen .build-hero-context { color: var(--flexiple-lime); }
+.build-screen .build-hero-context span { color: #89a27b; }
+.build-screen .build-hero-description { color: #d6e2d5; }
+.build-screen .build-hero-trust > span { padding: 7px 10px; border: 1px solid #ffffff30; color: #f3f8ef; background: #082c1cbf; }
+.build-screen .build-hero-trust svg { color: var(--flexiple-lime); }
+.build-screen .build-hero-city { text-shadow: 0 1px 5px #082c1c; }
+.build-screen .build-metric { border-color: #fff; background: #fff; }
+.build-screen .build-metric-icon { color: var(--flexiple-forest); background: var(--flexiple-lime-soft); }
+.build-screen .build-metric div > span { color: var(--build-ink); font-weight: 500; }
+.build-screen .build-metric strong { color: var(--flexiple-forest); }
+.build-screen .build-metric small { color: var(--build-muted); }
+.build-screen .build-reasons ul,
+.build-screen .build-reasons p,
+.build-screen .build-reasons .build-fit-insight { color: var(--build-muted); }
+.build-screen .build-reasons > div:first-child li::marker { color: #547432; }
+.build-screen .build-fit-list li { color: var(--flexiple-green); background: var(--build-soft); }
+.build-screen .build-fit-list.risks li { color: #765131; background: #fff5eb; }
+.build-screen .build-fit-row { border-color: var(--build-line); }
+.build-screen .build-fit-row h3 { color: #65745f; }
+.build-screen .build-route-card.recommended { border-color: var(--flexiple-forest); background: #f8fbed; }
+.build-screen .build-route-icon:is(.eor, .bot, .direct) { color: var(--flexiple-green); background: var(--build-soft); }
+.build-screen .build-route-card.recommended .build-route-icon { color: var(--flexiple-forest); background: var(--flexiple-lime); }
+.build-screen .build-route-tag:is(.eor, .bot, .direct) { color: var(--flexiple-green); background: var(--build-soft); }
+.build-screen .build-route-card.recommended .build-route-tag { color: var(--flexiple-forest); background: var(--flexiple-lime); }
+.build-screen .build-route-top p,
+.build-screen .build-route-note,
+.build-screen .build-fact { color: var(--build-muted); }
+.build-screen .build-fact strong { color: var(--build-ink); border-color: var(--build-line); }
+.build-screen .build-fact,
+.build-screen .build-route-note { border-color: var(--build-line); }
+.build-screen .build-route-card > button,
+.build-screen .build-view-toggle button,
+.build-screen .build-detail-actions button,
+.build-screen .build-table-select,
+.build-screen .build-cost-intro button { color: var(--flexiple-green); border-color: var(--build-line); }
+.build-screen .build-route-card > button.selected,
+.build-screen .build-view-toggle button.active,
+.build-screen .build-table-select[aria-pressed=true] { color: #fff; border-color: var(--flexiple-forest); background: var(--flexiple-forest); }
+.build-screen .build-route-card > button.selected svg { color: var(--flexiple-lime); }
+.build-screen .build-route-card > button.selected:hover { background: var(--flexiple-green); }
+.build-screen .build-route-card > button:not(.selected):hover,
+.build-screen .build-view-toggle button:not(.active):hover,
+.build-screen .build-detail-actions button:hover,
+.build-screen .build-cost-intro button:hover { background: var(--flexiple-lime-soft); }
+.build-screen .build-exploration { border-color: #c8d6b7; color: var(--flexiple-green); background: var(--flexiple-lime-soft); }
+.build-screen .build-tabs button { color: var(--build-muted); }
+.build-screen .build-tabs button.active { color: var(--flexiple-forest); }
+.build-screen .build-tabs button.active::after { height: 3px; background: var(--flexiple-forest); }
+.build-screen .build-assumptions-table th,
+.build-screen .build-route-table thead { color: var(--flexiple-green); background: var(--build-soft); }
+.build-screen .build-assumptions-table td,
+.build-screen .build-assumptions-table th,
+.build-screen .build-route-table td,
+.build-screen .build-route-table th { border-color: var(--build-line); }
+.build-screen .build-assumptions-table,
+.build-screen .build-route-table tbody th,
+.build-screen .build-cost-intro p,
+.build-screen .build-cost-formula,
+.build-screen .build-quote label { color: var(--build-muted); }
+.build-screen .build-confidence { color: var(--flexiple-forest); background: var(--flexiple-lime-soft); }
+.build-screen .build-confidence.input { color: var(--build-muted); background: var(--build-soft); }
+.build-screen .build-coverage { background: var(--build-soft); }
+.build-screen .build-coverage h3,
+.build-screen .build-caveats h3 { color: var(--flexiple-forest); }
+.build-screen .build-coverage h3 svg,
+.build-screen .build-coverage button,
+.build-screen .build-inline-link,
+.build-screen .build-source-links a { color: var(--flexiple-green); }
+.build-screen .build-coverage-meter { background: var(--build-line); }
+.build-screen .build-coverage-meter i,
+.build-screen .build-timeline-list i { background: var(--flexiple-green); }
+.build-screen .build-timeline-list small.fits { color: var(--flexiple-forest); background: var(--flexiple-lime-soft); }
+.build-screen .build-quote { border-color: var(--build-line); background: var(--build-soft); }
+.build-screen .build-quote-total strong { color: var(--flexiple-forest); }
+.build-screen :is(button, input):focus-visible { outline: 2px solid #47662c; outline-offset: 3px; }
+.build-screen .build-recommendation button:focus-visible { outline-color: var(--flexiple-lime); }
+@media (max-width: 760px) {
+  .build-screen .build-skyline { width: 100%; opacity: .14; }
+}

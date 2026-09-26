@@ -25,11 +25,11 @@ export default function App() {
   const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : location.hash.startsWith('#analyst') ? 'analyst' : 'overview');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [aiStatus, setAiStatus] = useState<AiStatus>({ configured: false, provider: null, model: null });
+  const [aiStatus, setAiStatus] = useState<AiStatus>({ configured: false, provider: null, model: null, saved: [], searchConfigured: false });
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getAiStatus().then(setAiStatus).catch(() => setAiStatus({ configured: false, provider: null, model: null }));
+    getAiStatus().then(setAiStatus).catch(() => setAiStatus({ configured: false, provider: null, model: null, saved: [], searchConfigured: false }));
   }, []);
 
   useEffect(() => {
@@ -71,10 +71,9 @@ export default function App() {
           <button className="nav-icon-button" aria-label="Notifications"><Bell size={19} /><span /></button>
           <div className="profile-control" ref={profileRef}>
             <button className="avatar-button" aria-label="User profile" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen(open => !open)}>RS</button>
-            {profileOpen && <div className="profile-menu" role="menu">
-              <div className="profile-menu-heading"><strong>Profile</strong><span>{aiStatus.configured ? 'Live AI ready' : 'Local analysis'}</span></div>
-              <button role="menuitem" type="button" onClick={() => { setSettingsOpen(true); setProfileOpen(false); }}><KeyRound size={18} /><span><strong>Manage API keys</strong><small>Connect OpenAI for live analysis</small></span></button>
-              <button role="menuitem" type="button" onClick={() => { setActivePage('analyst'); setProfileOpen(false); }}><Sparkles size={18} /><span><strong>Open AI Analyst</strong><small>Ask an evidence-backed question</small></span></button>
+            {profileOpen && <div className="profile-menu" role="menu" aria-label="Profile">
+              <div className="profile-menu-heading"><strong>Profile</strong></div>
+              <button role="menuitem" type="button" onClick={() => { setSettingsOpen(true); setProfileOpen(false); }}><KeyRound size={18} /><span>Manage API keys</span></button>
             </div>}
           </div>
         </div>
@@ -89,7 +88,7 @@ export default function App() {
         ) : activePage === 'build' ? (
           <BuildVsBuy cities={cityBenchmarks} assumptions={assumptions} />
         ) : activePage === 'analyst' ? (
-          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiModel={aiStatus.model} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
+          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiProvider={aiStatus.provider} aiModel={aiStatus.model} searchConfigured={aiStatus.searchConfigured} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>
@@ -102,4 +101,3 @@ export default function App() {
     </div>
   );
 }
-

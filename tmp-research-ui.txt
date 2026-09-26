@@ -1,0 +1,50 @@
+﻿function reportText(question: string, answer: LiveAnalysis, sources: ResearchEvidence[]) {
+  const cite = (finding: LiveFinding) => finding.text + ' ' + finding.citations.map(number => '[' + number + ']').join(' ');
+  return [
+    question, answer.title, answer.scope || '', cite({ text: answer.summary, citations: answer.summaryCitations || [] }),
+    ...(answer.comparison ? [answer.comparison.title, ['Factor', ...answer.comparison.columns].join(' | '), ...answer.comparison.rows.map(row => [row.factor, ...row.cells.map(cite)].join(' | '))] : []),
+    ...(answer.sections || []).flatMap(section => [section.title, ...section.paragraphs.map(cite), ...section.bullets.map(cite)]),
+    ...(answer.recommendation ? [answer.recommendation.choice, cite({ text: answer.recommendation.rationale, citations: answer.recommendation.citations })] : []),
+    'Next step: ' + answer.next, 'Caveat: ' + answer.caveat,
+    'Sources', ...sources.map(source => '[' + source.number + '] ' + source.title + (source.url ? ': ' + source.url : '')),
+  ].filter(Boolean).join('\n\n');
+}
+
+function ResearchAnswer({ research, searchConfigured, aiConfigured, onOpenSettings, onRetry, onAsk, onCopy, copied }: {
+  research: ResearchState | null;
+  searchConfigured: boolean;
+  aiConfigured: boolean;
+  onOpenSettings: () => void;
+  onRetry: () => void;
+  onAsk: (question: string) => void;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [activeSource, setActiveSource] = useState<number | null>(null);
+  useEffect(() => { setSourcesOpen(false); setActiveSource(null); }, [research?.question]);
+  const sources = [...(research?.local || []), ...(research?.web || [])];
+  const busy = Boolean(research && !['done', 'error'].includes(research.stage));
+  const analysis = research?.analysis;
+  const openSource = (number: number) => {
+    setSourcesOpen(true); setActiveSource(number);
+    window.setTimeout(() => document.getElementById('research-source-' + number)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30);
+  };
+  const refs = (numbers: number[]) => numbers.map(number => <Citation key={number} number={number} onClick={() => openSource(number)} />);
+  const progress = research?.stage === 'local' ? 'Checking GCC Compass data...' : research?.stage === 'planning' ? 'Exploring your question...' : research?.stage === 'reading' ? 'Reading sources' + (research.reading ? ' · ' + research.reading.completed + ' of ' + research.reading.total : '') + '...' : research?.stage === 'checking' ? 'Checking the evidence...' : research?.stage === 'searching-more' ? 'Researching the missing details...' : research?.stage === 'analyzing' ? 'Writing your analysis...' : 'Searching deeper...';
+  return <div className="analyst-research" aria-busy={busy}>
+    {busy && <div className="analyst-research-status" role="status"><span className="analyst-status-icon"><Sparkles size={20} /></span><div><strong>{progress}</strong><span>{sources.length ? 'Working with ' + sources.length + ' sources to answer your question.' : 'Gathering the context for a useful answer.'}</span></div><LoaderCircle className="spin" size={18} /></div>}
+    {research?.error && <div className="analyst-live-error" role="alert"><span>{research.error}</span><button type="button" onClick={onRetry}>Retry research</button></div>}
+    {research?.warnings.map((warning, index) => <p className="analyst-research-warning" key={index}><CircleHelp size={16} /> {warning} {!searchConfigured && warning.includes('Serper') && <button type="button" onClick={onOpenSettings}>Connect search</button>}{!aiConfigured && warning.includes('AI model') && <button type="button" onClick={onOpenSettings}>Connect AI</button>}</p>)}
+    {analysis ? <>
+      <section className="analyst-report-summary"><div className="analyst-report-heading"><Target size={22} /><h3>{analysis.title}</h3></div>{analysis.scope && <p className="analyst-report-scope">{analysis.scope}</p>}<p>{analysis.summary} {refs(analysis.summaryCitations || [])}</p></section>
+      {analysis.comparison && <section className="analyst-report-comparison"><h3 className="analyst-section-heading"><BarChart3 size={21} />{analysis.comparison.title}</h3><div className="analyst-report-table-wrap"><table className="analyst-report-table"><thead><tr><th scope="col">Decision factor</th>{analysis.comparison.columns.map((column, index) => <th scope="col" key={column} className={index % 2 ? 'right-city' : 'left-city'}><BuildingIcon index={index} />{column}</th>)}</tr></thead><tbody>{analysis.comparison.rows.map((row, index) => <tr key={index}><th scope="row">{row.factor}</th>{row.cells.map((cell, col) => <td key={col} data-city={analysis.comparison!.columns[col]} className={cell.status === 'unknown' ? 'analyst-missing-metric' : ''}>{cell.text} {refs(cell.citations)}</td>)}</tr>)}</tbody></table></div></section>}
+      {analysis.sections?.length ? <div className="analyst-report-sections">{analysis.sections.map((section, index) => <section key={index} className="analyst-report-section"><h3><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</h3>{section.paragraphs.map((paragraph, i) => <p key={i}>{paragraph.text} {refs(paragraph.citations)}</p>)}{section.bullets.length > 0 && <ul>{section.bullets.map((bullet, i) => <li key={i}>{bullet.text} {refs(bullet.citations)}</li>)}</ul>}</section>)}</div> : analysis.findings.length > 0 && <section className="analyst-research-findings"><h3 className="analyst-section-heading"><BarChart3 size={22} /> Key findings</h3><div className="analyst-research-findings-grid">{analysis.findings.map((finding, index) => <article key={index}><span className="analyst-research-index">{String(index + 1).padStart(2, '0')}</span><p>{finding.text} {refs(finding.citations)}</p></article>)}</div></section>}
+      {analysis.recommendation && <section className="analyst-report-verdict"><span className="analyst-verdict-icon"><Check size={23} /></span><div><span className="analyst-verdict-label">The recommendation</span><h3>{analysis.recommendation.choice}</h3><p>{analysis.recommendation.rationale} {refs(analysis.recommendation.citations)}</p></div></section>}
+      <div className="analyst-next"><Lightbulb size={25} /><div><strong>Recommended next step</strong><p>{analysis.next}</p></div></div>
+      <p className="analyst-caveat"><CircleHelp size={17} /><span><strong>Evidence note:</strong> {analysis.caveat}</span></p>
+      {analysis.followUps?.length ? <section className="analyst-report-followups"><h3>Explore further</h3>{analysis.followUps.map(question => <button key={question} type="button" onClick={() => onAsk(question)}><span>{question}</span><ArrowRight size={17} /></button>)}</section> : null}
+    </> : busy ? <div className="analyst-research-skeleton" aria-hidden="true"><i /><i /><i /><div><i /><i /></div></div> : <section className="analyst-research-pending"><h3>{research?.error ? 'The analysis needs another attempt' : 'Sources found for this question'}</h3><p>{sources.length ? sources.length + ' source records available. ' : 'No matching source records found. '}{aiConfigured ? 'Review the sources below or retry the analysis.' : 'Connect an AI model to turn these results into an answer.'}</p></section>}
+    {sources.length > 0 && !busy && <section className="analyst-report-sources" id="analyst-research-sources"><div className="analyst-report-actions"><button type="button" className="analyst-sources-toggle" aria-expanded={sourcesOpen} aria-controls="analyst-source-list" onClick={() => setSourcesOpen(!sourcesOpen)}><FileSearch size={18} /><span>Sources used <small>{sources.length}</small></span><ChevronDown size={16} className={sourcesOpen ? 'open' : ''} /></button>{analysis && <button className="analyst-copy" onClick={onCopy} type="button">{copied ? <Check size={15} /> : <File size={15} />}{copied ? 'Copied' : 'Copy answer'}</button>}</div>{sourcesOpen && <ol id="analyst-source-list" className="analyst-source-list">{sources.map(item => <li id={'research-source-' + item.number} key={item.number} className={item.number === activeSource ? 'active' : ''}><span className="analyst-source-number">{item.number}</span><div>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.title}<ExternalLink size={13} /></a> : <strong>{item.title}</strong>}<small>{item.type === 'local' ? 'Local dataset' : item.url ? new URL(item.url).hostname.replace(/^www\./, '') : 'Web source'}{item.type === 'web' ? ' · ' + (item.status === 'read' ? item.format === 'pdf' ? 'PDF report read' : 'Page read' : 'Search preview only') : ''}{item.publishedAt ? ' · ' + item.publishedAt.slice(0, 10) : ''}</small><p>{item.detail}</p>{item.status === 'preview' && item.reason && <span className="analyst-source-access">{item.reason}</span>}</div></li>)}</ol>}</section>}
+  </div>;
+}

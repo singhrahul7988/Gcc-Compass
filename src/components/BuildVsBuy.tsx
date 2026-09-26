@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
+import './buildVsBuy.css';
 import {
   AlertTriangle, ArrowRight, Building2, Check, ChevronDown, CircleHelp,
   Clock3, Database, Download, Landmark, LayoutGrid, Rocket, Settings2,
@@ -34,7 +35,7 @@ const emptyQuotes = (): Quotes => ({
 });
 const progressStyle = (value: number, max = 100, min = 0) => {
   const progress = ((value - min) / (max - min) * 100) + '%';
-  return { background: 'linear-gradient(to right, #1a8869 0 ' + progress + ', #e6e9eb ' + progress + ' 100%)' };
+  return { background: 'linear-gradient(to right, var(--flexiple-green) 0 ' + progress + ', var(--build-line) ' + progress + ' 100%)' };
 };
 const safeCsv = (value: unknown) => '"' + String(value ?? '').replaceAll('"', '""') + '"';
 const splitHighlights = (value: string) => value.split(/[;,]/)
@@ -286,7 +287,7 @@ export function BuildVsBuy({ cities, assumptions }: Props) {
 
     <div className="build-results">
       <section className="build-recommendation" id="build-recommendation" aria-live="polite">
-        <div className={'build-skyline' + (hasCityPhoto ? '' : ' abstract')} aria-hidden="true" style={cityPhoto ? { backgroundImage: 'linear-gradient(90deg, #f4fbf8 0%, #f4fbf8e6 12%, #f4fbf866 46%, #0c3c3733 100%), linear-gradient(0deg, #f4fbf8 0%, transparent 45%), url("' + cityPhoto + '")' } : undefined} />
+        <div className={'build-skyline' + (hasCityPhoto ? '' : ' abstract')} aria-hidden="true" style={cityPhoto ? { '--build-city-photo': 'url("' + cityPhoto + '")' } as CSSProperties : undefined} />
         <div className="build-hero-copy">
           <p className="build-kicker"><Sparkles size={15} /> <span>RECOMMENDED ROUTE</span></p>
           <h2>{route.title}</h2>

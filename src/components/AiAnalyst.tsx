@@ -1,16 +1,18 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
-  ArrowRight, BarChart3, Building2, CalendarDays, Check, ChevronRight, CircleHelp,
+  ArrowRight, BarChart3, Building2, CalendarDays, Check, ChevronRight, ChevronDown, CircleHelp,
   Cpu, Database, ExternalLink, File, FileSearch, Landmark, Lightbulb, List,
   LoaderCircle, Search, Sparkles, Target, Users, X
 } from 'lucide-react';
 import type { Assumption, CityBenchmark, GccRecord, Stakeholder, StatePolicy } from '../data';
 import { score, splitList } from '../data/csv';
-import { requestLiveAnalysis } from './aiClient';
-import type { LiveAnalysis, LiveFinding } from './aiClient';
+import { requestResearch } from './aiClient';
+import type { AiProvider, LiveAnalysis, LiveFinding, ResearchEvidence, ResearchEvent } from './aiClient';
 import bengaluruImage from '../assets/cities/bengaluru-reference.png';
 import hyderabadImage from '../assets/cities/hyderabad-reference.png';
+import puneImage from '../assets/cities/pune-unsplash.jpg';
+import delhiImage from '../assets/cities/delhi-unsplash.jpg';
 
 type Props = {
   cities: CityBenchmark[];
@@ -19,7 +21,9 @@ type Props = {
   assumptions: Assumption[];
   policies: StatePolicy[];
   aiConfigured: boolean;
+  aiProvider: AiProvider | null;
   aiModel: string | null;
+  searchConfigured: boolean;
   onOpenSettings: () => void;
   onOpenCityCompare: () => void;
   onOpenBuildVsBuy: () => void;
@@ -45,7 +49,18 @@ type Answer = {
   findings?: LiveFinding[];
   action?: 'cities' | 'build';
 };
-type LiveState = { status: 'idle' | 'loading' | 'success' | 'error'; question: string; analysis?: LiveAnalysis; error?: string };
+type ResearchState = {
+  question: string;
+  stage: 'local' | 'local-complete' | 'planning' | 'searching-web' | 'searching-more' | 'reading' | 'checking' | 'web' | 'analyzing' | 'done' | 'error';
+  entities?: string[];
+  reading?: { completed: number; total: number };
+  local: ResearchEvidence[];
+  web: ResearchEvidence[];
+  total: number;
+  analysis?: LiveAnalysis;
+  warnings: string[];
+  error?: string;
+};
 
 export const suggestedQuestions = [
   'Bengaluru vs Hyderabad for a 50-person AI team?',
@@ -267,75 +282,72 @@ export function AiAnalyst(props: Props) {
   const [generatedAt, setGeneratedAt] = useState(() => new Date());
   const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [live, setLive] = useState<LiveState>({ status: 'idle', question: suggestedQuestions[0] });
+  const [research, setResearch] = useState<ResearchState | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const isCustom = !suggestedQuestions.some(question => question.toLowerCase() === submitted.toLowerCase());
   const localAnswer = useMemo(() => analyze(submitted, props), [submitted, props.cities, props.records, props.stakeholders, props.assumptions, props.policies]);
-  const liveReady = live.status === 'success' && live.question === submitted && Boolean(live.analysis);
-  const answer: Answer = liveReady ? { ...localAnswer, ...live.analysis } : localAnswer;
+  const useResearch = isCustom || research?.question === submitted;
+  const answer = localAnswer;
   const isComparison = Boolean(localAnswer.tradeoffs);
 
   useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => {
-    if (!props.aiConfigured) {
-      controller.current?.abort();
-      setLive({ status: 'idle', question: submitted });
-    }
-  }, [props.aiConfigured]);
-
-  const runLive = (question: string, local: Answer) => {
     controller.current?.abort();
-    if (!props.aiConfigured) {
-      setLive({ status: 'idle', question });
-      return;
-    }
+    setResearch(previous => previous && !['done', 'error'].includes(previous.stage)
+      ? { ...previous, stage: 'error', error: 'Connections changed. Ask again to use the new settings.' }
+      : previous);
+  }, [props.aiConfigured, props.aiProvider, props.aiModel, props.searchConfigured]);
+
+  const runResearch = (question: string) => {
+    controller.current?.abort();
     const nextController = new AbortController();
     controller.current = nextController;
-    setLive({ status: 'loading', question });
-    const context = {
-      localAnalysis: {
-        title: local.title, summary: local.summary, next: local.next, caveat: local.caveat,
-        tradeoffs: local.tradeoffs?.map(row => ({ dimension: row.label, left: row.left, right: row.right })),
-        findings: local.findings,
-      },
-      evidence: local.evidence.map((item, index) => ({
-        number: index + 1, title: item.title, detail: item.detail, confidence: item.confidence,
-        checked: item.checked, sourceIds: item.sources.map(source => source.id), facts: item.facts,
-      })),
-    };
-    requestLiveAnalysis(question, context, nextController.signal)
-      .then(({ analysis }) => {
-        if (!nextController.signal.aborted) {
-          setLive({ status: 'success', question, analysis });
-          setGeneratedAt(new Date());
-        }
-      })
-      .catch(error => {
-        if (!nextController.signal.aborted) setLive({ status: 'error', question, error: (error as Error).message });
+    setResearch({ question, stage: 'local', local: [], web: [], total: 0, warnings: [] });
+    requestResearch(question, (event: ResearchEvent) => {
+      if (nextController.signal.aborted) return;
+      setResearch(previous => {
+        if (!previous || previous.question !== question) return previous;
+        if (event.stage === 'local') return { ...previous, local: event.results, entities: event.entities, total: event.total, stage: 'local-complete' };
+        if (['planning', 'searching-web', 'searching-more', 'checking'].includes(event.stage)) return { ...previous, stage: event.stage as ResearchState['stage'] };
+        if (event.stage === 'reading') return { ...previous, stage: 'reading', reading: { completed: event.completed, total: event.total } };
+        if (event.stage === 'web') return { ...previous, web: event.results };
+        if (event.stage === 'web-error') return { ...previous, warnings: [...previous.warnings, event.error], stage: 'web' };
+        if (event.stage === 'web-unavailable') return { ...previous, warnings: [...previous.warnings, 'Google search is not connected. Add a Serper key in AI settings.'], stage: 'web' };
+        if (event.stage === 'analyzing') return { ...previous, stage: 'analyzing' };
+        if (event.stage === 'answer') return { ...previous, analysis: event.analysis, stage: 'done' };
+        if (event.stage === 'analysis-error') return { ...previous, error: event.error, stage: 'error' };
+        if (event.stage === 'analysis-unavailable') return { ...previous, warnings: [...previous.warnings, 'Connect an AI model in settings to synthesize these sources.'], stage: 'done' };
+        if (event.stage === 'done') return { ...previous, stage: previous.error ? 'error' : 'done' };
+        return previous;
       });
+      if (event.stage === 'answer' || event.stage === 'done') setGeneratedAt(new Date());
+    }, nextController.signal).catch(error => {
+      if (!nextController.signal.aborted) setResearch(previous => previous?.question === question ? { ...previous, stage: 'error', error: (error as Error).message } : previous);
+    });
   };
 
   const ask = (question: string) => {
     const value = question.trim();
     if (!value) return;
-    const local = analyze(value, props);
     setDraft(value);
     setSubmitted(value);
     setGeneratedAt(new Date());
     setShowSources(false);
     setCopied(false);
-    runLive(value, local);
+    if (props.aiConfigured || props.searchConfigured || !suggestedQuestions.some(item => item.toLowerCase() === value.toLowerCase())) runResearch(value);
+    else { controller.current?.abort(); setResearch(null); }
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     ask(draft);
   };
   const inspectSources = () => {
-    setShowSources(true);
-    window.setTimeout(() => document.getElementById('analyst-source-records')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
+    if (!useResearch) setShowSources(true);
+    window.setTimeout(() => document.getElementById(useResearch ? 'analyst-research-sources' : 'analyst-source-records')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
   };
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText([submitted, answer.title, answer.summary, ...(answer.findings || []).map(item => item.text), 'Caveat: ' + answer.caveat].join('\n'));
+      await navigator.clipboard.writeText(useResearch && research?.analysis ? reportText(submitted, research.analysis, [...research.local, ...research.web]) : [submitted, answer.title, answer.summary, ...(answer.findings || []).map(item => item.text), 'Caveat: ' + answer.caveat].join('\n'));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -362,7 +374,7 @@ export function AiAnalyst(props: Props) {
   const generated = generatedAt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   const findings = answer.findings || [];
 
-  return <section className="analyst-screen" id="analyst">
+  return <section className={'analyst-screen' + (useResearch ? ' analyst-has-research' : '')} id="analyst">
     <header className="analyst-hero">
       <p className="eyebrow">AI Analyst / Decision intelligence</p>
       <h1>Ask a question. Trace the answer.</h1>
@@ -383,17 +395,15 @@ export function AiAnalyst(props: Props) {
       </aside>
       <article className="analyst-answer analyst-panel" aria-live="polite">
         <div className="analyst-answer-header">
-          <div className="analyst-answer-title"><Sparkles size={22} /><h2>AI Analyst answer</h2><button className="analyst-badge analyst-mode-button" type="button" onClick={props.onOpenSettings}>{liveReady ? 'Live AI analysis' : props.aiConfigured ? 'OpenAI ready' : localAnswer.evidence.length ? 'Local evidence · Connect AI' : 'Coverage gap · Connect AI'}</button></div>
+          <div className="analyst-answer-title"><Sparkles size={22} /><h2>AI Analyst answer</h2></div>
           <span className="analyst-generated">Generated on {generated}</span>
         </div>
         <div className="analyst-answer-content">
-          {live.status === 'loading' && live.question === submitted && <div className="analyst-live-state" role="status"><LoaderCircle className="spin" size={17} /> OpenAI is analyzing the cited evidence…</div>}
-          {live.status === 'error' && live.question === submitted && <div className="analyst-live-error" role="alert"><span>Live AI could not finish: {live.error} Showing the local evidence answer.</span><button type="button" onClick={() => runLive(submitted, localAnswer)}>Retry</button></div>}
+          {useResearch ? <ResearchAnswer research={research} searchConfigured={props.searchConfigured} aiConfigured={props.aiConfigured} onOpenSettings={props.onOpenSettings} onRetry={() => runResearch(submitted)} onAsk={ask} onCopy={copy} copied={copied} /> : <>
           <section className="analyst-takeaway">
             <Target size={25} />
             <div><h3>Executive takeaway</h3><p>{answer.summary} {localAnswer.evidence.slice(0, 2).map((_, index) => <Citation key={index} number={index + 1} onClick={inspectSources} />)}</p></div>
           </section>
-          {liveReady && findings.length > 0 && <div className="analyst-findings-panel"><h3>AI findings</h3>{findings.map((finding, index) => <p key={index}><span>{index + 1}</span><span>{finding.text} {finding.citations.map(number => <Citation key={number} number={number} onClick={inspectSources} />)}</span></p>)}</div>}
           {isComparison ? <>
             <h3 className="analyst-section-heading"><BarChart3 size={24} /> {answer.title}</h3>
             <div className="analyst-table-scroll"><table className="analyst-tradeoff-table">
@@ -404,18 +414,19 @@ export function AiAnalyst(props: Props) {
                 <td data-city={localAnswer.evidence[1]?.title}>{row.right} <Citation number={2} onClick={inspectSources} />{extraCitation(1, row.label) && <Citation number={extraCitation(1, row.label)!} onClick={inspectSources} />}</td>
               </tr>)}</tbody>
             </table></div>
-          </> : <section className="analyst-brief"><h3 className="analyst-section-heading"><BarChart3 size={24} /> {answer.title}</h3>{!liveReady && findings.length > 0 ? <div className="analyst-brief-points">{findings.map((finding, index) => <p key={index}>{finding.text} {finding.citations.map(number => <Citation key={number} number={number} onClick={inspectSources} />)}</p>)}</div> : !liveReady && <p>{answer.summary}</p>}</section>}
+          </> : <section className="analyst-brief"><h3 className="analyst-section-heading"><BarChart3 size={24} /> {answer.title}</h3>{findings.length > 0 ? <div className="analyst-brief-points">{findings.map((finding, index) => <p key={index}>{finding.text} {finding.citations.map(number => <Citation key={number} number={number} onClick={inspectSources} />)}</p>)}</div> : <p>{answer.summary}</p>}</section>}
           <div className="analyst-next">
             <Lightbulb size={27} />
             <div><strong>Recommended next step</strong><p>{answer.next}</p>{localAnswer.action === 'cities' && <button className="analyst-next-action" type="button" onClick={props.onOpenCityCompare}>Open City Compare <ExternalLink size={12} /></button>}{localAnswer.action === 'build' && <button className="analyst-next-action" type="button" onClick={props.onOpenBuildVsBuy}>Open Build vs Buy <ExternalLink size={12} /></button>}</div>
             {localAnswer.action && <button className="analyst-next-arrow" onClick={localAnswer.action === 'cities' ? props.onOpenCityCompare : props.onOpenBuildVsBuy} type="button" aria-label={localAnswer.action === 'cities' ? 'Go to City Compare' : 'Go to Build vs Buy'}><ChevronRight size={22} /></button>}
           </div>
           <p className="analyst-caveat"><CircleHelp size={17} /><span><strong>Caveat:</strong> {answer.caveat}</span></p>
+          </>}
         </div>
       </article>
-      <aside className="analyst-evidence analyst-panel">
-        <div className="analyst-evidence-heading"><h2><Database size={20} /> Evidence used</h2><button type="button" onClick={inspectSources}>Trace citations</button></div>
-        {localAnswer.evidence.length ? <>
+      <aside className={'analyst-evidence analyst-panel' + (useResearch ? ' analyst-evidence-snapshot' : '')}>
+        <div className="analyst-evidence-heading"><h2><Database size={20} /> Evidence used</h2>{!useResearch && <button type="button" onClick={inspectSources}>Trace citations</button>}</div>
+        {useResearch ? <ResearchSnapshot research={research} question={submitted} cities={props.cities} /> : localAnswer.evidence.length ? <>
           <div className="analyst-evidence-list">{localAnswer.evidence.map((item, index) => <article className="analyst-evidence-card" key={item.title + index}>
             <div className="analyst-evidence-main">
               {item.image ? <img src={item.image} alt={item.title + ' city landmark'} /> : <span className="analyst-evidence-placeholder"><FileSearch size={26} /></span>}
@@ -432,10 +443,108 @@ export function AiAnalyst(props: Props) {
           </section>
           <button className="analyst-inspect" type="button" onClick={inspectSources}><File size={21} /><span><strong>Inspect source records</strong><small>View the records and source IDs used in this analysis.</small></span><ChevronRight size={17} /></button>
         </> : <div className="analyst-empty-evidence"><FileSearch size={30} /><strong>No supporting records</strong><p>This question cannot be answered from the verified local evidence.</p></div>}
-        {showSources && <section className="analyst-source-records" id="analyst-source-records"><div><h3>Source records</h3><button onClick={() => setShowSources(false)} type="button" aria-label="Close source records"><X size={16} /></button></div>{citationRecords.length ? citationRecords.map(record => <p key={record.number}><b>[{record.number}]</b> {record.source?.url ? <a href={record.source.url} target="_blank" rel="noreferrer">{record.title} <ExternalLink size={12} /></a> : <span>{record.title}</span>}<small>{record.detail} · {record.source?.id ?? 'Local dataset'}</small></p>) : <p>No source record is available for this question.</p>}<button className="analyst-copy" onClick={copy} type="button">{copied ? <Check size={15} /> : <File size={15} />}{copied ? 'Copied answer' : 'Copy answer'}</button></section>}
+        {!useResearch && showSources && <section className="analyst-source-records" id="analyst-source-records"><div><h3>Source records</h3><button onClick={() => setShowSources(false)} type="button" aria-label="Close source records"><X size={16} /></button></div>{citationRecords.length ? citationRecords.map(record => <p key={record.number}><b>[{record.number}]</b> {record.source?.url ? <a href={record.source.url} target="_blank" rel="noreferrer">{record.title} <ExternalLink size={12} /></a> : <span>{record.title}</span>}<small>{record.detail} · {record.source?.id ?? 'Local dataset'}</small></p>) : <p>No source record is available for this question.</p>}<button className="analyst-copy" onClick={copy} type="button">{copied ? <Check size={15} /> : <File size={15} />}{copied ? 'Copied answer' : 'Copy answer'}</button></section>}
       </aside>
     </div>
   </section>;
+}
+
+
+function reportText(question: string, answer: LiveAnalysis, sources: ResearchEvidence[]) {
+  const cite = (finding: LiveFinding) => finding.text + ' ' + finding.citations.map(number => '[' + number + ']').join(' ');
+  return [
+    question, answer.title, answer.scope || '', cite({ text: answer.summary, citations: answer.summaryCitations || [] }),
+    ...(answer.comparison ? [answer.comparison.title, ['Factor', ...answer.comparison.columns].join(' | '), ...answer.comparison.rows.map(row => [row.factor, ...row.cells.map(cite)].join(' | '))] : []),
+    ...(answer.sections || []).flatMap(section => [section.title, ...section.paragraphs.map(cite), ...section.bullets.map(cite)]),
+    ...(answer.recommendation ? [answer.recommendation.choice, cite({ text: answer.recommendation.rationale, citations: answer.recommendation.citations })] : []),
+    'Next step: ' + answer.next, 'Caveat: ' + answer.caveat,
+    'Sources', ...sources.map(source => '[' + source.number + '] ' + source.title + (source.url ? ': ' + source.url : '')),
+  ].filter(Boolean).join('\n\n');
+}
+
+function ResearchAnswer({ research, searchConfigured, aiConfigured, onOpenSettings, onRetry, onAsk, onCopy, copied }: {
+  research: ResearchState | null;
+  searchConfigured: boolean;
+  aiConfigured: boolean;
+  onOpenSettings: () => void;
+  onRetry: () => void;
+  onAsk: (question: string) => void;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [activeSource, setActiveSource] = useState<number | null>(null);
+  useEffect(() => { setSourcesOpen(false); setActiveSource(null); }, [research?.question]);
+  const sources = [...(research?.local || []), ...(research?.web || [])];
+  const busy = Boolean(research && !['done', 'error'].includes(research.stage));
+  const analysis = research?.analysis;
+  const openSource = (number: number) => {
+    setSourcesOpen(true); setActiveSource(number);
+    window.setTimeout(() => document.getElementById('research-source-' + number)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30);
+  };
+  const refs = (numbers: number[]) => numbers.map(number => <Citation key={number} number={number} onClick={() => openSource(number)} />);
+  const progress = research?.stage === 'local' ? 'Checking GCC Compass data...' : research?.stage === 'planning' ? 'Exploring your question...' : research?.stage === 'reading' ? 'Reading sources' + (research.reading ? ' · ' + research.reading.completed + ' of ' + research.reading.total : '') + '...' : research?.stage === 'checking' ? 'Checking the evidence...' : research?.stage === 'searching-more' ? 'Researching the missing details...' : research?.stage === 'analyzing' ? 'Writing your analysis...' : 'Searching deeper...';
+  return <div className="analyst-research" aria-busy={busy}>
+    {busy && <div className="analyst-research-status" role="status"><span className="analyst-status-icon"><Sparkles size={20} /></span><div><strong>{progress}</strong><span>{sources.length ? 'Working with ' + sources.length + ' sources to answer your question.' : 'Gathering the context for a useful answer.'}</span></div><LoaderCircle className="spin" size={18} /></div>}
+    {research?.error && <div className="analyst-live-error" role="alert"><span>{research.error}</span><button type="button" onClick={onRetry}>Retry research</button></div>}
+    {research?.warnings.map((warning, index) => <p className="analyst-research-warning" key={index}><CircleHelp size={16} /> {warning} {!searchConfigured && warning.includes('Serper') && <button type="button" onClick={onOpenSettings}>Connect search</button>}{!aiConfigured && warning.includes('AI model') && <button type="button" onClick={onOpenSettings}>Connect AI</button>}</p>)}
+    {analysis ? <>
+      <section className="analyst-report-summary"><div className="analyst-report-heading"><Target size={22} /><h3>{analysis.title}</h3></div>{analysis.scope && <p className="analyst-report-scope">{analysis.scope}</p>}<p>{analysis.summary} {refs(analysis.summaryCitations || [])}</p></section>
+      {analysis.comparison && <section className="analyst-report-comparison"><h3 className="analyst-section-heading"><BarChart3 size={21} />{analysis.comparison.title}</h3><div className="analyst-report-table-wrap"><table className="analyst-report-table"><thead><tr><th scope="col">Decision factor</th>{analysis.comparison.columns.map((column, index) => <th scope="col" key={column} className={index % 2 ? 'right-city' : 'left-city'}><BuildingIcon index={index} />{column}</th>)}</tr></thead><tbody>{analysis.comparison.rows.map((row, index) => <tr key={index}><th scope="row">{row.factor}</th>{row.cells.map((cell, col) => <td key={col} data-city={analysis.comparison!.columns[col]} className={cell.status === 'unknown' ? 'analyst-missing-metric' : ''}>{cell.text} {refs(cell.citations)}</td>)}</tr>)}</tbody></table></div></section>}
+      {analysis.sections?.length ? <div className="analyst-report-sections">{analysis.sections.map((section, index) => <section key={index} className="analyst-report-section"><h3><span>{String(index + 1).padStart(2, '0')}</span>{section.title}</h3>{section.paragraphs.map((paragraph, i) => <p key={i}>{paragraph.text} {refs(paragraph.citations)}</p>)}{section.bullets.length > 0 && <ul>{section.bullets.map((bullet, i) => <li key={i}>{bullet.text} {refs(bullet.citations)}</li>)}</ul>}</section>)}</div> : analysis.findings.length > 0 && <section className="analyst-research-findings"><h3 className="analyst-section-heading"><BarChart3 size={22} /> Key findings</h3><div className="analyst-research-findings-grid">{analysis.findings.map((finding, index) => <article key={index}><span className="analyst-research-index">{String(index + 1).padStart(2, '0')}</span><p>{finding.text} {refs(finding.citations)}</p></article>)}</div></section>}
+      {analysis.recommendation && <section className="analyst-report-verdict"><span className="analyst-verdict-icon"><Check size={23} /></span><div><span className="analyst-verdict-label">The recommendation</span><h3>{analysis.recommendation.choice}</h3><p>{analysis.recommendation.rationale} {refs(analysis.recommendation.citations)}</p></div></section>}
+      <div className="analyst-next"><Lightbulb size={25} /><div><strong>Recommended next step</strong><p>{analysis.next}</p></div></div>
+      <p className="analyst-caveat"><CircleHelp size={17} /><span><strong>Evidence note:</strong> {analysis.caveat}</span></p>
+      {analysis.followUps?.length ? <section className="analyst-report-followups"><h3>Explore further</h3>{analysis.followUps.map(question => <button key={question} type="button" onClick={() => onAsk(question)}><span>{question}</span><ArrowRight size={17} /></button>)}</section> : null}
+    </> : busy ? <div className="analyst-research-skeleton" aria-hidden="true"><i /><i /><i /><div><i /><i /></div></div> : <section className="analyst-research-pending"><h3>{research?.error ? 'The analysis needs another attempt' : 'Sources found for this question'}</h3><p>{sources.length ? sources.length + ' source records available. ' : 'No matching source records found. '}{aiConfigured ? 'Review the sources below or retry the analysis.' : 'Connect an AI model to turn these results into an answer.'}</p></section>}
+    {sources.length > 0 && !busy && <section className="analyst-report-sources" id="analyst-research-sources"><div className="analyst-report-actions"><button type="button" className="analyst-sources-toggle" aria-expanded={sourcesOpen} aria-controls="analyst-source-list" onClick={() => setSourcesOpen(!sourcesOpen)}><FileSearch size={18} /><span>Sources used <small>{sources.length}</small></span><ChevronDown size={16} className={sourcesOpen ? 'open' : ''} /></button>{analysis && <button className="analyst-copy" onClick={onCopy} type="button">{copied ? <Check size={15} /> : <File size={15} />}{copied ? 'Copied' : 'Copy answer'}</button>}</div>{sourcesOpen && <ol id="analyst-source-list" className="analyst-source-list">{sources.map(item => <li id={'research-source-' + item.number} key={item.number} className={item.number === activeSource ? 'active' : ''}><span className="analyst-source-number">{item.number}</span><div>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.title}<ExternalLink size={13} /></a> : <strong>{item.title}</strong>}<small>{item.type === 'local' ? 'Local dataset' : item.url ? new URL(item.url).hostname.replace(/^www\./, '') : 'Web source'}{item.type === 'web' ? ' · ' + (item.status === 'read' ? item.format === 'pdf' ? 'PDF report read' : 'Page read' : 'Search preview only') : ''}{item.publishedAt ? ' · ' + item.publishedAt.slice(0, 10) : ''}</small><p>{item.detail}</p>{item.status === 'preview' && item.reason && <span className="analyst-source-access">{item.reason}</span>}</div></li>)}</ol>}</section>}
+  </div>;
+}
+
+function cityPicture(name: string) {
+  const city = name.toLowerCase();
+  if (city === 'bengaluru') return bengaluruImage;
+  if (city === 'hyderabad') return hyderabadImage;
+  if (city === 'pune') return puneImage;
+  if (city === 'delhi ncr') return delhiImage;
+  return null;
+}
+
+function ResearchSnapshot({ research, question, cities }: {
+  research: ResearchState | null;
+  question: string;
+  cities: CityBenchmark[];
+}) {
+  const supportedCities = cities.filter(city =>
+    research?.local.some(item => item.kind === 'city' && item.title.toLowerCase() === city.city.toLowerCase())
+  );
+  const namedCities = supportedCities.filter(city => research?.entities?.includes(city.city) || question.toLowerCase().includes(city.city.toLowerCase()) || (city.city === 'Delhi NCR' && /\b(delhi|ncr|gurgaon|gurugram|noida)\b/i.test(question)));
+  const asksAboutCities = /\b(cities|city|location|talent|office|rent|hiring|cost)\b/i.test(question);
+  const cards = (namedCities.length ? namedCities : asksAboutCities ? supportedCities : []).slice(0, 3);
+  const localCount = research?.local.length || 0;
+  const webCount = research?.web.filter(item => item.status === 'read').length || 0;
+  return <div className="analyst-snapshot">
+    {cards.length ? cards.map(city => {
+      const picture = cityPicture(city.city);
+      const count = Number.parseInt(city.gcc_sample_count, 10);
+      const confidence = score(city.confidence_score);
+      return <article className="analyst-snapshot-city" key={city.city}>
+        {picture ? <img src={picture} alt={city.city + ' landmark'} /> : <div className="analyst-snapshot-placeholder"><Building2 size={29} aria-hidden="true" /></div>}
+        <div className="analyst-snapshot-city-body">
+          <h3>{city.city}</h3>
+          <p>{city.state}</p>
+          <div className="analyst-snapshot-metrics">
+            {Number.isFinite(count) && <div><strong>{count.toLocaleString('en-IN')}</strong><span>GCC records in sample</span></div>}
+            {confidence > 0 && <div><strong>{confidence}%</strong><span>Source confidence</span></div>}
+          </div>
+        </div>
+      </article>;
+    }) : null}
+    {!cards.length && <div className="analyst-snapshot-coverage">
+      <div><strong>{localCount}</strong><span>Local records reviewed</span></div>
+      <div><strong>{webCount}</strong><span>Web pages read</span></div>
+    </div>}
+  </div>;
 }
 
 function BuildingIcon({ index }: { index: number }) {

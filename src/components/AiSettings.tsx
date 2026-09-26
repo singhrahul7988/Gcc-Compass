@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CheckCircle2, KeyRound, LoaderCircle, ShieldCheck, Trash2, X } from 'lucide-react';
-import { removeAiSettings, saveAiSettings, testAiConnection } from './aiClient';
-import type { AiStatus } from './aiClient';
+import { providerNames, removeAiSettings, removeSearchSettings, saveAiSettings, saveSearchSettings, suggestedModels, testAiConnection } from './aiClient';
+import type { AiProvider, AiStatus } from './aiClient';
 
 type Props = {
   status: AiStatus;
@@ -10,13 +10,26 @@ type Props = {
   onClose: () => void;
 };
 
+const providers: AiProvider[] = ['openai', 'gemini', 'claude', 'deepseek'];
+const keyExamples: Record<AiProvider, string> = {
+  openai: 'sk-...', gemini: 'AIza...', claude: 'sk-ant-...', deepseek: 'sk-...',
+};
+
 export function AiSettings({ status, onStatusChange, onClose }: Props) {
+  const [provider, setProvider] = useState<AiProvider>(status.provider || 'openai');
+  const [model, setModel] = useState(() => status.model || suggestedModels.openai[0]);
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState(status.model || 'gpt-4o-mini');
-  const [busy, setBusy] = useState(false);
+  const [searchKey, setSearchKey] = useState('');
+  const [searchPending, setSearchPending] = useState<'save' | 'remove' | null>(null);
+  const searchBusy = searchPending !== null;
+  const [searchMessage, setSearchMessage] = useState('');
+  const [searchError, setSearchError] = useState('');
+  const [pending, setPending] = useState<'save' | 'test' | 'remove' | null>(null);
+  const busy = pending !== null;
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const keyInput = useRef<HTMLInputElement>(null);
+  const selectedSaved = status.saved.find(item => item.provider === provider);
 
   useEffect(() => {
     keyInput.current?.focus();
@@ -25,88 +38,134 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
+  const chooseProvider = (next: AiProvider) => {
+    setProvider(next);
+    setModel(status.saved.find(item => item.provider === next)?.model || suggestedModels[next][0]);
+    setApiKey('');
+    setMessage('');
+    setError('');
+  };
+
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setBusy(true); setError(''); setMessage('');
+    setPending('save'); setError(''); setMessage('');
     try {
-      const saved = await saveAiSettings(apiKey.trim(), model);
+      const saved = await saveAiSettings(provider, apiKey.trim(), model.trim());
       onStatusChange(saved);
       setApiKey('');
-      try {
-        await testAiConnection();
-        setMessage('OpenAI key saved and connection verified. New analyst questions will use live AI.');
-      } catch (testError) {
-        const reason = (testError as Error).message;
-        if (reason.includes('rejected this API key')) {
-          const reset = await removeAiSettings();
-          onStatusChange(reset);
-          setError(reason + ' The rejected key was removed.');
-        } else {
-          setError(reason + ' The key is saved for this session; update it here if needed.');
-        }
-      }
+      setMessage('Saved.');
     } catch (saveError) {
       setError((saveError as Error).message);
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   };
 
   const test = async () => {
-    setBusy(true); setError(''); setMessage('');
+    setPending('test'); setError(''); setMessage('');
     try {
-      await testAiConnection();
-      setMessage('OpenAI connection verified.');
+      await testAiConnection(provider);
+      setMessage('Connection verified.');
     } catch (testError) {
       setError((testError as Error).message);
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   };
 
   const remove = async () => {
-    setBusy(true); setError(''); setMessage('');
+    setPending('remove'); setError(''); setMessage('');
     try {
-      const next = await removeAiSettings();
+      const next = await removeAiSettings(provider);
       onStatusChange(next);
       setApiKey('');
-      setMessage('API key removed. The analyst will use local evidence answers.');
+      setMessage('Key removed.');
     } catch (removeError) {
       setError((removeError as Error).message);
     } finally {
-      setBusy(false);
+      setPending(null);
+    }
+  };
+
+  const saveSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSearchPending('save'); setSearchMessage(''); setSearchError('');
+    try {
+      const next = await saveSearchSettings(searchKey.trim());
+      onStatusChange(next);
+      setSearchKey('');
+      setSearchMessage('Saved.');
+    } catch (saveError) {
+      setSearchError((saveError as Error).message);
+    } finally {
+      setSearchPending(null);
+    }
+  };
+
+  const removeSearch = async () => {
+    setSearchPending('remove'); setSearchMessage(''); setSearchError('');
+    try {
+      onStatusChange(await removeSearchSettings());
+      setSearchMessage('Key removed.');
+    } catch (removeError) {
+      setSearchError((removeError as Error).message);
+    } finally {
+      setSearchPending(null);
     }
   };
 
   return <div className="ai-settings-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="ai-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
       <div className="ai-settings-header">
-        <div className="ai-settings-icon"><KeyRound size={21} /></div>
-        <div><p className="eyebrow">Profile / AI settings</p><h2 id="ai-settings-title">Connect live AI analysis</h2></div>
+        <div className="ai-settings-icon" aria-hidden="true"><KeyRound size={20} /></div>
+        <h2 id="ai-settings-title">Manage API keys</h2>
         <button type="button" onClick={onClose} aria-label="Close AI settings"><X size={19} /></button>
       </div>
-      <p className="ai-settings-description">Add your OpenAI API key to get a fresh, question-specific analysis of the evidence shown in GCC Compass.</p>
-      <div className="ai-settings-status"><span className={status.configured ? 'connected' : ''} />{status.configured ? 'OpenAI key saved for this session' : 'Using local evidence answers'}{status.model && <small>Model: {status.model}</small>}</div>
-      <form onSubmit={save}>
-        <label htmlFor="ai-provider">Provider</label>
-        <select id="ai-provider" value="openai" disabled><option value="openai">OpenAI</option></select>
-        <label htmlFor="ai-model">Model</label>
-        <select id="ai-model" value={model} onChange={event => setModel(event.target.value)} disabled={busy}>
-          <option value="gpt-4o-mini">GPT-4o mini</option>
-          <option value="gpt-4o">GPT-4o</option>
-        </select>
-        <label htmlFor="ai-api-key">API key</label>
-        <input ref={keyInput} id="ai-api-key" type="password" autoComplete="off" spellCheck={false} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="sk-..." disabled={busy} />
-        <p className="ai-settings-hint"><ShieldCheck size={16} /> The key stays in server memory for this session. It is never saved in your browser or included in the app build. Questions and cited context are sent to OpenAI when you run live analysis.</p>
+      <form className="ai-settings-provider-form" aria-label="AI provider" onSubmit={save}>
+        <div className="ai-settings-field-row">
+          <div className="ai-settings-field">
+            <label htmlFor="ai-provider">Provider</label>
+            <select id="ai-provider" value={provider} onChange={event => chooseProvider(event.target.value as AiProvider)} disabled={busy}>
+              {providers.map(item => <option value={item} key={item}>{providerNames[item]}</option>)}
+            </select>
+          </div>
+          <div className="ai-settings-field">
+            <label htmlFor="ai-model">Model</label>
+            <input id="ai-model" list="ai-model-options" value={model} onChange={event => { setModel(event.target.value); setMessage(''); setError(''); }} placeholder={suggestedModels[provider][0]} autoComplete="off" spellCheck={false} disabled={busy} />
+            <datalist id="ai-model-options">{suggestedModels[provider].map(item => <option key={item} value={item} />)}</datalist>
+          </div>
+        </div>
+        <div className="ai-settings-field">
+          <label htmlFor="ai-api-key">API key</label>
+          <input ref={keyInput} id="ai-api-key" type="password" autoComplete="off" spellCheck={false} value={apiKey} onChange={event => { setApiKey(event.target.value); setMessage(''); setError(''); }} placeholder={selectedSaved ? 'Enter a replacement key' : keyExamples[provider]} disabled={busy} />
+        </div>
+        <div className="ai-settings-actions">
+          {selectedSaved && <button type="button" className="ai-settings-remove" aria-label={'Remove ' + providerNames[provider] + ' key'} onClick={remove} disabled={busy}>{pending === 'remove' ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />} Remove key</button>}
+          <div className="ai-settings-submit-actions">
+            {selectedSaved && <button type="button" className="ai-settings-secondary" onClick={test} disabled={busy}>{pending === 'test' && <LoaderCircle size={15} className="spin" />} Test connection</button>}
+            <button type="submit" className="ai-settings-primary" disabled={busy || !model.trim() || (!apiKey.trim() && !selectedSaved)}>{pending === 'save' && <LoaderCircle size={15} className="spin" />} Save</button>
+          </div>
+        </div>
         {error && <p className="ai-settings-error" role="alert">{error}</p>}
         {message && <p className="ai-settings-success" role="status"><CheckCircle2 size={16} /> {message}</p>}
-        <div className="ai-settings-actions">
-          {status.configured && <button type="button" className="ai-settings-secondary" onClick={test} disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : <CheckCircle2 size={16} />} Test connection</button>}
-          <button type="submit" className="ai-settings-primary" disabled={busy || !apiKey.trim()}>{busy ? <LoaderCircle size={16} className="spin" /> : <KeyRound size={16} />} Save and test key</button>
-        </div>
       </form>
-      {status.configured && <button type="button" className="ai-settings-remove" onClick={remove} disabled={busy}><Trash2 size={16} /> Remove saved key</button>}
+      <section className="ai-settings-search" aria-labelledby="ai-settings-search-title">
+        <h3 id="ai-settings-search-title">Web search</h3>
+        <p>Research the web and read source pages with <a href="https://serper.dev/" target="_blank" rel="noreferrer">Serper</a>.</p>
+        <form aria-label="Web search" onSubmit={saveSearch}>
+          <div className="ai-settings-field">
+            <label htmlFor="ai-search-key">Serper API key</label>
+            <input id="ai-search-key" type="password" autoComplete="off" spellCheck={false} value={searchKey} onChange={event => { setSearchKey(event.target.value); setSearchMessage(''); setSearchError(''); }} placeholder={status.searchConfigured ? 'Enter a replacement key' : 'Enter API key'} disabled={searchBusy} />
+          </div>
+          <div className="ai-settings-actions">
+            {status.searchConfigured && <button type="button" className="ai-settings-remove" aria-label="Remove web search key" onClick={removeSearch} disabled={searchBusy}>{searchPending === 'remove' ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />} Remove key</button>}
+            <button type="submit" className="ai-settings-primary" disabled={searchBusy || searchKey.trim().length < 10}>{searchPending === 'save' && <LoaderCircle size={15} className="spin" />} Save</button>
+          </div>
+          {searchError && <p className="ai-settings-error" role="alert">{searchError}</p>}
+          {searchMessage && <p className="ai-settings-success" role="status"><CheckCircle2 size={16} /> {searchMessage}</p>}
+        </form>
+      </section>
+      <p className="ai-settings-hint"><ShieldCheck size={14} /> Keys are stored for this session only.</p>
     </section>
   </div>;
 }
-
