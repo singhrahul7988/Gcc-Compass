@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "start": "node server/index.mjs"
+    "start": "node server/index.mjs",
+    "test": "node --test server/*.test.mjs",
+    "check": "npm test && node scripts/verify_opportunity_data.mjs && npm run build"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
@@ -27,5 +29,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "playwright": "^1.63.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

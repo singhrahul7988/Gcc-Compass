@@ -6,7 +6,7 @@ A React and TypeScript application for exploring India's GCC landscape, comparin
 
 ## Requirements
 
-Use Node.js 22.12 or newer and npm. Commit the package lockfile and use npm ci for reproducible installs.
+Use Node.js 22.12 or newer within Node.js 22.x and npm. Commit the package lockfile and use npm ci for reproducible installs.
 
 ## Local development
 
@@ -17,7 +17,11 @@ npm run dev
 
 Open http://127.0.0.1:5173. The Vite development server also mounts the AI API.
 
-## Production
+## Deploy to Vercel
+
+Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel settings, persistent session setup, required environment variables, and deployment checks. The repository includes vercel.json and a Node.js API function so AI Analyst and research deploy alongside the frontend.
+
+## Production on a Node.js host
 
 ~~~sh
 npm ci
@@ -48,8 +52,10 @@ Internal Docs, pitch decks, research source files, generated artifacts, credenti
 ## Verification
 
 ~~~sh
-node --test server/*.test.mjs
-node scripts/verify_opportunity_data.mjs
+npm run check
+npm audit --audit-level=high
 ~~~
+
+GitHub Actions runs these checks on every push and pull request.
 
 With the development server running, browser checks are available in scripts/verify_ecosystem.mjs, scripts/verify_opportunities.mjs, scripts/verify_ecosystem_dropdowns.mjs, scripts/verify_header_navigation.mjs, and scripts/verify_page_navigation.mjs. The page-navigation check covers cross-page buttons, URLs, browser history, shared comparisons, and mobile navigation without generating screenshots. These browser scripts currently use a local Chrome installation at the Windows path declared in each script. Screenshots are regenerated under the ignored artifacts/ directory.

@@ -49,7 +49,7 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
     response = await fetch('/api/ai' + path, { credentials: 'same-origin', ...options });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
-    throw new Error('AI service is unavailable. Start the app server and try again.');
+    throw new Error('AI service is unavailable. Please try again shortly.');
   }
   let data;
   try { data = await response.json(); }
@@ -179,7 +179,7 @@ export async function requestResearch(question: string, onEvent: (event: Researc
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
-    throw new Error('Research service is unavailable. Start the app server and try again.');
+    throw new Error('Research service is unavailable. Please try again shortly.');
   }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

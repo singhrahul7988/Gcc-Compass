@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/ai.js": {
+      "includeFiles": "dataset/processed/*.csv",
+      "maxDuration": 300,
+      "supportsCancellation": true
+    }
+  },
+  "rewrites": [
+    { "source": "/api/ai/:path*", "destination": "/api/ai?endpoint=:path*" }
+  ]
+}

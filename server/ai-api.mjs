@@ -1,20 +1,12 @@
 import { randomBytes } from 'node:crypto';
+import { createSessionStore, SESSION_MS } from './session-store.mjs';
 import { parseJson } from './research-contract.mjs';
 import { conductResearch } from './research-engine.mjs';
 import { createResearchRetrieval, getResearchKeys, RESEARCH_PROVIDERS, RESEARCH_LABELS, testResearchKey } from './retrieval-providers.mjs';
 
 const COOKIE_NAME = 'gcc_ai_session';
-const SESSION_MS = 12 * 60 * 60 * 1000;
 const PROVIDERS = new Set(['openai', 'gemini', 'claude', 'deepseek']);
 const LABELS = { openai: 'OpenAI', gemini: 'Gemini', claude: 'Claude', deepseek: 'DeepSeek' };
-const sessions = new Map();
-const cleanup = setInterval(() => {
-  const currentTime = Date.now();
-  for (const [id, session] of sessions) {
-    if (session.expires <= currentTime) sessions.delete(id);
-  }
-}, 15 * 60 * 1000);
-cleanup.unref();
 
 const analysisSchema = {
   type: 'object',
@@ -58,14 +50,11 @@ function sessionId(req) {
   return id && /^[A-Za-z0-9_-]{20,80}$/.test(id) ? id : null;
 }
 
-function getSession(req, now) {
+async function getSession(req, now, store) {
   const id = sessionId(req);
-  const session = id ? sessions.get(id) : undefined;
+  const session = id ? await store.get(id) : undefined;
   if (!session) return null;
-  if (session.expires <= now()) {
-    sessions.delete(id);
-    return null;
-  }
+  if (session.expires <= now()) return null;
   return { id, ...session };
 }
 
@@ -76,7 +65,7 @@ function publicStatus(session) {
 }
 
 function cookieValue(req, id, maxAge) {
-  const secure = req.socket?.encrypted ? '; Secure' : '';
+  const secure = req.socket?.encrypted || req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
   return COOKIE_NAME + '=' + id + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=' + maxAge + secure;
 }
 
@@ -251,7 +240,7 @@ function streamEvent(res, event) {
   if (!res.destroyed && !res.writableEnded) res.write(JSON.stringify(event) + '\n');
 }
 
-async function runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource) {
+async function runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource, researchTimeoutMs) {
   const body = await readJson(req);
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   if (!question || question.length > 500) return send(res, 400, { error: 'Ask a question under 500 characters.' });
@@ -264,7 +253,8 @@ async function runResearch(req, res, session, fetchImpl, pageReader, diagnostic,
   const controller = new AbortController();
   const closed = () => { if (!res.writableEnded) controller.abort(); };
   res.on('close', closed);
-  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(360000)]);
+  req.on('error', closed);
+  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(researchTimeoutMs)]);
   const credential = session?.credentials?.[session.active];
   const retrieval = createResearchRetrieval({ keys: getResearchKeys(session), fetchImpl, localReader: pageReader, ...(validateSource ? { validate: validateSource } : {}), diagnostic });
   try {
@@ -282,40 +272,40 @@ async function runResearch(req, res, session, fetchImpl, pageReader, diagnostic,
     }
   } finally {
     res.off('close', closed);
+    req.off('error', closed);
     if (!res.writableEnded) res.end();
   }
 }
 
-export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date.now, pageReader, validateSource, diagnostic = detail => console.warn('[AI research]', JSON.stringify(detail)) } = {}) {
+export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date.now, pageReader, validateSource, sessionStore, researchTimeoutMs = process.env.VERCEL ? 280000 : 360000, diagnostic = detail => console.warn('[AI research]', JSON.stringify(detail)) } = {}) {
+  let store = sessionStore;
   return async function aiApi(req, res, next) {
     const pathname = new URL(req.url || '/', 'http://localhost').pathname;
     if (!['/status', '/settings', '/web-settings', '/research-settings', '/research-test', '/test', '/analyze', '/research'].includes(pathname)) return next();
     if (!sameOrigin(req)) return send(res, 403, { error: 'Cross-origin request blocked.' });
     try {
-      let session = getSession(req, now);
+      store ||= createSessionStore({ now });
+      const session = await getSession(req, now, store);
       if (req.method === 'GET' && pathname === '/status') {
         // Establish identity before forms can save keys concurrently.
         if (!session) {
           const id = randomBytes(24).toString('base64url');
-          const initial = { credentials: {}, researchKeys: {}, active: null, revision: 0, expires: now() + SESSION_MS };
-          sessions.set(id, initial);
+          const initial = await store.update(id, current => current);
           return send(res, 200, publicStatus(initial), cookieValue(req, id, Math.floor(SESSION_MS / 1000)));
         }
         return send(res, 200, publicStatus(session));
       }
-      const update = change => {
+      const update = async change => {
         const id = session?.id || randomBytes(24).toString('base64url');
-        const current = sessions.get(id) || { credentials: {}, researchKeys: {}, active: null, revision: 0 };
         // Re-read after provider validation so another successful save is never overwritten.
-        const updated = { ...change(current), expires: now() + SESSION_MS, revision: (current.revision || 0) + 1 };
-        sessions.set(id, updated);
+        const updated = await store.update(id, current => ({ ...change(current), revision: (current.revision || 0) + 1 }));
         return send(res, 200, publicStatus(updated), cookieValue(req, id, Math.floor(SESSION_MS / 1000)));
       };
       if (req.method === 'DELETE' && ['/web-settings', '/research-settings'].includes(pathname)) {
         const body = pathname === '/web-settings' ? {} : await readJson(req);
         const provider = pathname === '/web-settings' ? 'serper' : body.provider;
         if (!RESEARCH_PROVIDERS.includes(provider)) return send(res, 400, { error: 'Choose a supported research service.' });
-        return update(current => {
+        return await update(current => {
           const researchKeys = getResearchKeys(current);
           delete researchKeys[provider];
           const { searchKey, ...rest } = current;
@@ -326,14 +316,14 @@ export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date
         const body = await readJson(req);
         const provider = body.provider || session?.active;
         if (!PROVIDERS.has(provider)) return send(res, 400, { error: 'Choose a supported provider.' });
-        return update(current => {
+        return await update(current => {
           const credentials = { ...current.credentials };
           delete credentials[provider];
           return { ...current, credentials, active: current.active === provider ? Object.keys(credentials)[0] || null : current.active };
         });
       }
       if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed.' });
-      if (pathname === '/research') return runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource);
+      if (pathname === '/research') return await runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource, researchTimeoutMs);
       if (['/web-settings', '/research-settings', '/research-test'].includes(pathname)) {
         const body = await readJson(req);
         const provider = pathname === '/web-settings' ? 'serper' : body.provider;
@@ -342,7 +332,7 @@ export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date
         if (!apiKey || apiKey.length < 10 || apiKey.length > 500 || /\s/.test(apiKey)) return send(res, 400, { error: 'Enter a valid ' + RESEARCH_LABELS[provider] + ' API key.' });
         await testResearchKey(fetchImpl, provider, apiKey);
         if (pathname === '/research-test') return send(res, 200, { ok: true, provider });
-        return update(current => {
+        return await update(current => {
           const { searchKey, ...rest } = current;
           return { ...rest, researchKeys: { ...getResearchKeys(current), [provider]: apiKey } };
         });
@@ -356,7 +346,7 @@ export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date
         const apiKey = (typeof body.apiKey === 'string' && body.apiKey.trim()) || session?.credentials?.[provider]?.key || '';
         if (apiKey.length < 20 || apiKey.length > 500 || /\s/.test(apiKey)) return send(res, 400, { error: 'Enter a valid ' + LABELS[provider] + ' API key.' });
         await callProvider(fetchImpl, provider, apiKey, model, 'Reply with OK.', true);
-        return update(current => ({
+        return await update(current => ({
           ...current, credentials: { ...current.credentials, [provider]: { key: apiKey, model } }, active: provider,
         }));
       }
