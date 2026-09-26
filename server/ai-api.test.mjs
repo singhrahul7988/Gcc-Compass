@@ -44,7 +44,7 @@ test('provider keys, custom model IDs, activation, and grounded analysis', async
       status: 200, headers: { 'Content-Type': 'application/json' },
     });
   };
-  const middleware = createAiApiMiddleware({ fetchImpl: fakeFetch, pageReader: async () => ({ title: 'External market report', content: 'Page text about the active Hyderabad technology talent market.', format: 'article' }) });
+  const middleware = createAiApiMiddleware({ fetchImpl: fakeFetch, pageReader: async () => ({ title: 'External market report', content: 'Page text about the active Hyderabad technology talent market. '.repeat(4), format: 'article' }) });
   const server = createServer((req, res) => {
     if (!req.url?.startsWith('/api/ai')) { res.statusCode = 404; res.end(); return; }
     req.url = req.url.slice('/api/ai'.length) || '/';
@@ -75,7 +75,7 @@ test('provider keys, custom model IDs, activation, and grounded analysis', async
   const evidence = { evidence: [{ number: 1, title: 'Bengaluru', facts: { talent_strengths: 'Deep engineering pool' } }] };
   try {
     let result = await request('/status');
-    assert.deepEqual(result.data, { configured: false, provider: null, model: null, saved: [], searchConfigured: false });
+    assert.deepEqual(result.data, { configured: false, provider: null, model: null, saved: [], searchConfigured: false, researchProviders: [], revision: 0 });
     let events = await requestEvents('Microsoft GCC Hyderabad');
     assert.deepEqual(events.map(item => item.stage), ['local', 'web-unavailable', 'analysis-unavailable', 'done']);
     assert.equal(events[0].results.some(item => item.title === 'Microsoft'), true);
@@ -122,6 +122,18 @@ test('provider keys, custom model IDs, activation, and grounded analysis', async
       if (provider === 'gemini') assert.equal(analysisCall.payload.generationConfig.responseMimeType, 'application/json');
       if (provider === 'claude') assert.equal(analysisCall.payload.output_config.format.type, 'json_schema');
       if (provider === 'deepseek') assert.equal(analysisCall.payload.response_format.type, 'json_object');
+    }
+
+    result = await request('/web-settings', 'POST', { apiKey: 'serper-test-12345678901234567890' });
+    assert.equal(result.response.status, 200);
+    for (const [provider, model] of settings) {
+      await request('/settings', 'POST', { provider, model, apiKey: '' });
+      const reportEvents = await requestEvents('Compare Hyderabad and Delhi for a 25-person data GCC');
+      assert.ok(reportEvents.some(item => item.stage === 'answer'), provider + ' should return a rich report');
+      assert.ok(calls.at(-1).prompt.includes('Page text about the active Hyderabad'));
+      assert.equal(calls.at(-1).provider, provider);
+      if (provider === 'gemini') assert.equal(calls.at(-1).payload.generationConfig.responseJsonSchema.properties.comparison.anyOf[0].type, 'object');
+      if (provider === 'deepseek') assert.match(calls.at(-1).payload.messages[0].content, /Output JSON schema/);
     }
 
     result = await request('/web-settings', 'POST', { apiKey: 'serper-test-12345678901234567890' });

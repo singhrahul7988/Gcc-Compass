@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
+import { parseJson } from './research-contract.mjs';
 import { conductResearch } from './research-engine.mjs';
+import { createResearchRetrieval, getResearchKeys, RESEARCH_PROVIDERS, RESEARCH_LABELS, testResearchKey } from './retrieval-providers.mjs';
 
 const COOKIE_NAME = 'gcc_ai_session';
 const SESSION_MS = 12 * 60 * 60 * 1000;
@@ -70,7 +72,7 @@ function getSession(req, now) {
 function publicStatus(session) {
   const saved = Object.entries(session?.credentials || {}).map(([provider, credential]) => ({ provider, model: credential.model }));
   const provider = session?.active && session.credentials[session.active] ? session.active : null;
-  return { configured: Boolean(provider), provider, model: provider ? session.credentials[provider].model : null, saved, searchConfigured: Boolean(session?.searchKey) };
+  return { configured: Boolean(provider), provider, model: provider ? session.credentials[provider].model : null, saved, searchConfigured: Object.keys(getResearchKeys(session)).length > 0, researchProviders: Object.keys(getResearchKeys(session)), revision: session?.revision || 0 };
 }
 
 function cookieValue(req, id, maxAge) {
@@ -79,11 +81,15 @@ function cookieValue(req, id, maxAge) {
 }
 
 async function readJson(req) {
-  let raw = '';
+  const chunks = [];
+  let bytes = 0;
   for await (const chunk of req) {
-    raw += chunk.toString('utf8');
-    if (raw.length > 50000) throw { status: 413, message: 'Request is too large.' };
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    bytes += buffer.length;
+    if (bytes > 50000) throw { status: 413, message: 'Request is too large.' };
+    chunks.push(buffer);
   }
+  const raw = Buffer.concat(chunks).toString('utf8');
   try {
     return JSON.parse(raw || '{}');
   } catch {
@@ -100,7 +106,21 @@ function sameOrigin(req) {
   }
 }
 
-function providerRequest(provider, key, model, prompt, isTest, task) {
+function geminiSchema(schema, requireComparison) {
+  const result = structuredClone(schema);
+  if (result.properties?.sections) Object.assign(result.properties.sections, { minItems: 2, maxItems: 6 });
+  const comparison = result.properties?.comparison;
+  const table = comparison?.anyOf?.find(item => item.type === 'object');
+  if (table) {
+    if (requireComparison) comparison.anyOf = [table];
+    Object.assign(table.properties.columns, { minItems: 2, maxItems: 4 });
+    Object.assign(table.properties.rows, { minItems: 3, maxItems: 9 });
+    Object.assign(table.properties.rows.items.properties.cells, { minItems: 2, maxItems: 4 });
+  }
+  return result;
+}
+
+export function providerRequest(provider, key, model, prompt, isTest, task) {
   const instructions = task?.instructions || analystInstructions;
   const schema = task?.schema || analysisSchema;
   const tokens = task?.tokens || 2400;
@@ -119,7 +139,7 @@ function providerRequest(provider, key, model, prompt, isTest, task) {
     body: {
       ...(isAnalysis ? { systemInstruction: { parts: [{ text: instructions }] } } : {}),
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: isTest ? 512 : Math.max(4096, tokens), ...(isAnalysis ? { responseMimeType: 'application/json', ...(task ? { responseJsonSchema: schema } : {}) } : {}) },
+      generationConfig: { maxOutputTokens: isTest ? 512 : Math.max(4096, tokens), ...(isAnalysis ? { responseMimeType: 'application/json', ...(task ? { responseJsonSchema: geminiSchema(schema, task.requireComparison) } : {}) } : {}) },
     },
   };
   if (provider === 'claude') return {
@@ -142,11 +162,33 @@ function providerRequest(provider, key, model, prompt, isTest, task) {
   };
 }
 
-function providerText(provider, result) {
+export function providerText(provider, result) {
   if (provider === 'openai') return (result.output || []).filter(item => item.type === 'message').flatMap(item => item.content || []).filter(item => item.type === 'output_text' && typeof item.text === 'string').map(item => item.text).join('');
-  if (provider === 'gemini') return (result.candidates?.[0]?.content?.parts || []).filter(part => typeof part.text === 'string').map(part => part.text).join('');
+  if (provider === 'gemini') return (result.candidates?.[0]?.content?.parts || []).filter(part => !part.thought && typeof part.text === 'string').map(part => part.text).join('');
   if (provider === 'claude') return (result.content || []).filter(item => item.type === 'text' && typeof item.text === 'string').map(item => item.text).join('');
   return result.choices?.[0]?.message?.content || '';
+}
+
+export function providerOutput(provider, result, isTest = false) {
+  const text = providerText(provider, result);
+  const reason = provider === 'gemini' ? result.candidates?.[0]?.finishReason
+    : provider === 'claude' ? result.stop_reason
+    : provider === 'deepseek' ? result.choices?.[0]?.finish_reason
+    : result.incomplete_details?.reason;
+  if (!isTest && ['MAX_TOKENS', 'max_tokens', 'length', 'max_output_tokens'].includes(reason)) {
+    const error = new Error(LABELS[provider] + ' stopped before the report was complete. Retry the analysis or choose a model with a larger output limit.');
+    error.code = 'OUTPUT_TRUNCATED';
+    error.finishReason = reason;
+    error.responseText = typeof text === 'string' ? text : '';
+    throw error;
+  }
+  const refused = provider === 'gemini' && (result.promptFeedback?.blockReason || (reason && !['STOP', 'MAX_TOKENS'].includes(reason)))
+    || provider === 'claude' && result.stop_reason === 'refusal'
+    || provider === 'openai' && ((result.output || []).some(item => (item.content || []).some(part => part.type === 'refusal')) || result.status === 'failed' || result.status === 'incomplete')
+    || provider === 'deepseek' && result.choices?.[0]?.finish_reason === 'content_filter';
+  if (refused) throw { status: 422, message: LABELS[provider] + ' did not complete this request. Try rephrasing the question or choose another model.' };
+  if (typeof text !== 'string' || !text.trim()) throw { status: 502, message: LABELS[provider] + ' returned no answer text. Try again or choose another model.' };
+  return text.trim();
 }
 
 async function callProvider(fetchImpl, provider, key, model, prompt, isTest, task, signal) {
@@ -157,12 +199,15 @@ async function callProvider(fetchImpl, provider, key, model, prompt, isTest, tas
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...request.headers },
       body: JSON.stringify(request.body),
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(task ? 100000 : 60000)]) : AbortSignal.timeout(60000),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(task?.timeoutMs || (task ? 90000 : 60000))]) : AbortSignal.timeout(60000),
     });
-  } catch {
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (error.name === 'TimeoutError') throw { status: 504, message: LABELS[provider] + ' took too long to respond. Retry or choose a faster model.' };
     throw { status: 502, message: LABELS[provider] + ' could not be reached. Check the connection and try again.' };
   }
   if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
     if (response.status === 401 || response.status === 403) throw { status: 401, message: LABELS[provider] + ' rejected this API key or its permissions.' };
     if (response.status === 429) throw { status: 429, message: LABELS[provider] + ' rate limit or quota reached. Try again later.' };
     if (response.status === 400 || response.status === 404) throw { status: 400, message: LABELS[provider] + ' could not use model "' + model + '". Check the exact model ID and key access.' };
@@ -174,9 +219,7 @@ async function callProvider(fetchImpl, provider, key, model, prompt, isTest, tas
   } catch {
     throw { status: 502, message: LABELS[provider] + ' returned an unreadable response.' };
   }
-  const text = providerText(provider, result);
-  if (typeof text !== 'string' || !text.trim()) throw { status: 502, message: LABELS[provider] + ' returned no text.' };
-  return text.trim();
+  return providerOutput(provider, result, isTest);
 }
 
 function cleanAnalysis(value, evidence) {
@@ -200,12 +243,7 @@ function cleanAnalysis(value, evidence) {
 }
 
 function parseAnalysis(text) {
-  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    throw { status: 502, message: 'The selected model did not return a valid analysis. Try another model ID.' };
-  }
+  return parseJson(text);
 }
 
 
@@ -213,42 +251,7 @@ function streamEvent(res, event) {
   if (!res.destroyed && !res.writableEnded) res.write(JSON.stringify(event) + '\n');
 }
 
-async function searchGoogle(fetchImpl, apiKey, question, signal) {
-  let response;
-  try {
-    response = await fetchImpl('https://google.serper.dev/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-      body: JSON.stringify({ q: question, gl: 'in', hl: 'en', num: 8 }),
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(16000)]) : AbortSignal.timeout(16000),
-    });
-  } catch {
-    throw new Error('Google search could not be reached.');
-  }
-  if (response.status === 401 || response.status === 403) throw new Error('Serper rejected the Google search key.');
-  if (response.status === 429) throw new Error('Google search quota or rate limit reached.');
-  if (!response.ok) throw new Error('Google search failed (' + response.status + ').');
-  let data;
-  try { data = await response.json(); } catch { throw new Error('Google search returned an unreadable response.'); }
-  const seen = new Set();
-  return (Array.isArray(data.organic) ? data.organic : []).filter(item => {
-    if (typeof item?.link !== 'string' || !/^https:\/\//i.test(item.link) || seen.has(item.link)) return false;
-    try { new URL(item.link); } catch { return false; }
-    seen.add(item.link);
-    return true;
-  }).slice(0, 8).map(item => ({
-    type: 'web', kind: 'google-result',
-    title: String(item.title || new URL(item.link).hostname).slice(0, 160),
-    detail: String(item.snippet || '').slice(0, 600),
-    url: item.link.slice(0, 1500),
-    sourceIds: ['Google via Serper'],
-    confidence: null,
-    checked: null,
-    facts: {},
-  }));
-}
-
-async function runResearch(req, res, session, fetchImpl, pageReader) {
+async function runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource) {
   const body = await readJson(req);
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   if (!question || question.length > 500) return send(res, 400, { error: 'Ask a question under 500 characters.' });
@@ -261,12 +264,14 @@ async function runResearch(req, res, session, fetchImpl, pageReader) {
   const controller = new AbortController();
   const closed = () => { if (!res.writableEnded) controller.abort(); };
   res.on('close', closed);
-  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(240000)]);
+  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(360000)]);
   const credential = session?.credentials?.[session.active];
+  const retrieval = createResearchRetrieval({ keys: getResearchKeys(session), fetchImpl, localReader: pageReader, ...(validateSource ? { validate: validateSource } : {}), diagnostic });
   try {
     await conductResearch({
-      question, signal, pageReader,
-      search: session?.searchKey ? (query, abortSignal) => searchGoogle(fetchImpl, session.searchKey, query, abortSignal) : null,
+      question, signal, pageReader: retrieval.pageReader, retrievalMetrics: retrieval.metrics,
+      diagnostic: detail => diagnostic({ provider: session?.active, model: credential?.model, ...detail }),
+      search: retrieval.search,
       model: credential ? (prompt, task, abortSignal) => callProvider(fetchImpl, session.active, credential.key, credential.model, prompt, false, task, abortSignal) : null,
       emit: event => streamEvent(res, event),
     });
@@ -281,54 +286,66 @@ async function runResearch(req, res, session, fetchImpl, pageReader) {
   }
 }
 
-export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date.now, pageReader } = {}) {
+export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date.now, pageReader, validateSource, diagnostic = detail => console.warn('[AI research]', JSON.stringify(detail)) } = {}) {
   return async function aiApi(req, res, next) {
     const pathname = new URL(req.url || '/', 'http://localhost').pathname;
-    if (!['/status', '/settings', '/web-settings', '/test', '/analyze', '/research'].includes(pathname)) return next();
+    if (!['/status', '/settings', '/web-settings', '/research-settings', '/research-test', '/test', '/analyze', '/research'].includes(pathname)) return next();
     if (!sameOrigin(req)) return send(res, 403, { error: 'Cross-origin request blocked.' });
     try {
-      const session = getSession(req, now);
-      if (req.method === 'GET' && pathname === '/status') return send(res, 200, publicStatus(session));
-      if (req.method === 'DELETE' && pathname === '/web-settings') {
-        if (!session) return send(res, 200, publicStatus(null));
-        const updated = { credentials: session.credentials, active: session.active, expires: session.expires };
-        if (!updated.active) {
-          sessions.delete(session.id);
-          return send(res, 200, publicStatus(null), cookieValue(req, '', 0));
+      let session = getSession(req, now);
+      if (req.method === 'GET' && pathname === '/status') {
+        // Establish identity before forms can save keys concurrently.
+        if (!session) {
+          const id = randomBytes(24).toString('base64url');
+          const initial = { credentials: {}, researchKeys: {}, active: null, revision: 0, expires: now() + SESSION_MS };
+          sessions.set(id, initial);
+          return send(res, 200, publicStatus(initial), cookieValue(req, id, Math.floor(SESSION_MS / 1000)));
         }
-        sessions.set(session.id, updated);
-        return send(res, 200, publicStatus(updated));
+        return send(res, 200, publicStatus(session));
       }
-      if (req.method === 'DELETE' && pathname === '/settings') {
-        if (!session) return send(res, 200, publicStatus(null), cookieValue(req, '', 0));
-        const body = await readJson(req);
-        const provider = body.provider || session.active;
-        if (!PROVIDERS.has(provider)) return send(res, 400, { error: 'Choose a supported provider.' });
-        const credentials = { ...session.credentials };
-        delete credentials[provider];
-        const active = session.active === provider ? Object.keys(credentials)[0] || null : session.active;
-        if (!active && !session.searchKey) {
-          sessions.delete(session.id);
-          return send(res, 200, publicStatus(null), cookieValue(req, '', 0));
-        }
-        const updated = { credentials, active, searchKey: session.searchKey, expires: session.expires };
-        sessions.set(session.id, updated);
-        return send(res, 200, publicStatus(updated));
-      }
-      if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed.' });
-      if (pathname === '/research') return runResearch(req, res, session, fetchImpl, pageReader);
-      if (pathname === '/web-settings') {
-        const body = await readJson(req);
-        const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
-        if (apiKey.length < 10 || apiKey.length > 500 || /\s/.test(apiKey)) return send(res, 400, { error: 'Enter a valid Serper API key.' });
-        await searchGoogle(fetchImpl, apiKey, 'India GCC market');
+      const update = change => {
         const id = session?.id || randomBytes(24).toString('base64url');
-        const updated = {
-          credentials: session?.credentials || {}, active: session?.active || null,
-          searchKey: apiKey, expires: now() + SESSION_MS,
-        };
+        const current = sessions.get(id) || { credentials: {}, researchKeys: {}, active: null, revision: 0 };
+        // Re-read after provider validation so another successful save is never overwritten.
+        const updated = { ...change(current), expires: now() + SESSION_MS, revision: (current.revision || 0) + 1 };
         sessions.set(id, updated);
         return send(res, 200, publicStatus(updated), cookieValue(req, id, Math.floor(SESSION_MS / 1000)));
+      };
+      if (req.method === 'DELETE' && ['/web-settings', '/research-settings'].includes(pathname)) {
+        const body = pathname === '/web-settings' ? {} : await readJson(req);
+        const provider = pathname === '/web-settings' ? 'serper' : body.provider;
+        if (!RESEARCH_PROVIDERS.includes(provider)) return send(res, 400, { error: 'Choose a supported research service.' });
+        return update(current => {
+          const researchKeys = getResearchKeys(current);
+          delete researchKeys[provider];
+          const { searchKey, ...rest } = current;
+          return { ...rest, researchKeys };
+        });
+      }
+      if (req.method === 'DELETE' && pathname === '/settings') {
+        const body = await readJson(req);
+        const provider = body.provider || session?.active;
+        if (!PROVIDERS.has(provider)) return send(res, 400, { error: 'Choose a supported provider.' });
+        return update(current => {
+          const credentials = { ...current.credentials };
+          delete credentials[provider];
+          return { ...current, credentials, active: current.active === provider ? Object.keys(credentials)[0] || null : current.active };
+        });
+      }
+      if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed.' });
+      if (pathname === '/research') return runResearch(req, res, session, fetchImpl, pageReader, diagnostic, validateSource);
+      if (['/web-settings', '/research-settings', '/research-test'].includes(pathname)) {
+        const body = await readJson(req);
+        const provider = pathname === '/web-settings' ? 'serper' : body.provider;
+        if (!RESEARCH_PROVIDERS.includes(provider)) return send(res, 400, { error: 'Choose a supported research service.' });
+        const apiKey = pathname === '/research-test' ? getResearchKeys(session)[provider] : typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+        if (!apiKey || apiKey.length < 10 || apiKey.length > 500 || /\s/.test(apiKey)) return send(res, 400, { error: 'Enter a valid ' + RESEARCH_LABELS[provider] + ' API key.' });
+        await testResearchKey(fetchImpl, provider, apiKey);
+        if (pathname === '/research-test') return send(res, 200, { ok: true, provider });
+        return update(current => {
+          const { searchKey, ...rest } = current;
+          return { ...rest, researchKeys: { ...getResearchKeys(current), [provider]: apiKey } };
+        });
       }
       if (pathname === '/settings') {
         const body = await readJson(req);
@@ -339,20 +356,15 @@ export function createAiApiMiddleware({ fetchImpl = globalThis.fetch, now = Date
         const apiKey = (typeof body.apiKey === 'string' && body.apiKey.trim()) || session?.credentials?.[provider]?.key || '';
         if (apiKey.length < 20 || apiKey.length > 500 || /\s/.test(apiKey)) return send(res, 400, { error: 'Enter a valid ' + LABELS[provider] + ' API key.' });
         await callProvider(fetchImpl, provider, apiKey, model, 'Reply with OK.', true);
-        const id = session?.id || randomBytes(24).toString('base64url');
-        const updated = {
-          credentials: { ...session?.credentials, [provider]: { key: apiKey, model } },
-          active: provider,
-          searchKey: session?.searchKey,
-          expires: now() + SESSION_MS,
-        };
-        sessions.set(id, updated);
-        return send(res, 200, publicStatus(updated), cookieValue(req, id, Math.floor(SESSION_MS / 1000)));
+        return update(current => ({
+          ...current, credentials: { ...current.credentials, [provider]: { key: apiKey, model } }, active: provider,
+        }));
       }
       if (!session?.active) return send(res, 401, { error: 'Add an AI provider key in settings first.' });
       if (pathname === '/test') {
         const body = await readJson(req);
         const provider = body.provider || session.active;
+        if (!PROVIDERS.has(provider)) return send(res, 400, { error: 'Choose a supported provider.' });
         const credential = session.credentials[provider];
         if (!credential) return send(res, 404, { error: 'No saved key for this provider.' });
         await callProvider(fetchImpl, provider, credential.key, credential.model, 'Reply with OK.', true);

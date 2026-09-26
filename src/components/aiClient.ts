@@ -1,10 +1,14 @@
 export type AiProvider = 'openai' | 'gemini' | 'claude' | 'deepseek';
+export type ResearchProvider = 'tavily' | 'exa' | 'firecrawl' | 'serper';
+export const researchProviderNames: Record<ResearchProvider, string> = { tavily: 'Tavily', exa: 'Exa', firecrawl: 'Firecrawl', serper: 'Serper' };
 export type AiStatus = {
   configured: boolean;
   provider: AiProvider | null;
   model: string | null;
   saved: { provider: AiProvider; model: string }[];
   searchConfigured: boolean;
+  researchProviders?: ResearchProvider[];
+  revision?: number;
 };
 export type LiveFinding = { text: string; citations: number[] };
 export type LiveAnalysis = {
@@ -20,6 +24,7 @@ export type LiveAnalysis = {
     columns: string[];
     rows: { factor: string; cells: { text: string; citations: number[]; status: 'supported' | 'estimate' | 'unknown' }[] }[];
   } | null;
+  comparisonNote?: string;
   sections?: { title: string; paragraphs: LiveFinding[]; bullets: LiveFinding[] }[];
   recommendation?: { choice: string; rationale: string; citations: number[] } | null;
   followUps?: string[];
@@ -33,7 +38,7 @@ export const providerNames: Record<AiProvider, string> = {
 };
 export const suggestedModels: Record<AiProvider, string[]> = {
   openai: ['gpt-4o-mini', 'gpt-4o'],
-  gemini: ['gemini-3.8-flash', 'gemini-3.7-flash'],
+  gemini: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.1-flash-lite'],
   claude: ['claude-sonnet-5', 'claude-haiku-4-5'],
   deepseek: ['deepseek-flash', 'deepseek-v4-pro'],
 };
@@ -46,8 +51,21 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new Error('AI service is unavailable. Start the app server and try again.');
   }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'AI service is unavailable.');
+  let data;
+  try { data = await response.json(); }
+  catch {
+    if (response.ok) throw new Error('AI service returned an unreadable response.');
+    data = {};
+  }
+  if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'AI service is unavailable.');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('AI service returned an invalid response.');
+  if (['/status', '/settings', '/research-settings', '/web-settings'].includes(path) &&
+      (typeof data.configured !== 'boolean' || typeof data.searchConfigured !== 'boolean' || !Array.isArray(data.saved) ||
+       data.saved.some((item: { provider?: string; model?: string } | null) => !item || !Object.hasOwn(providerNames, item.provider || '') || typeof item.model !== 'string') ||
+       (data.provider !== null && !Object.hasOwn(providerNames, data.provider)) ||
+       (data.model !== null && typeof data.model !== 'string'))) {
+    throw new Error('AI service returned invalid connection settings.');
+  }
   return data as T;
 }
 
@@ -107,13 +125,13 @@ export type ResearchEvidence = {
 };
 export type ResearchEvent =
   | { stage: 'local'; total: number; results: ResearchEvidence[]; entities?: string[] }
-  | { stage: 'searching-web' | 'planning' | 'checking' | 'searching-more' }
+  | { stage: 'searching-web' | 'planning' | 'checking' | 'searching-more' | 'repairing' }
   | { stage: 'reading'; completed: number; total: number }
   | { stage: 'web'; results: ResearchEvidence[] }
   | { stage: 'web-error'; error: string }
   | { stage: 'web-unavailable' }
   | { stage: 'analyzing'; provider?: AiProvider; model?: string }
-  | { stage: 'answer'; analysis: LiveAnalysis; provider?: AiProvider; model?: string }
+  | { stage: 'answer'; analysis: LiveAnalysis; incomplete?: boolean; warning?: string; provider?: AiProvider; model?: string }
   | { stage: 'analysis-error'; error: string }
   | { stage: 'analysis-unavailable' }
   | { stage: 'done' };
@@ -128,6 +146,27 @@ export function saveSearchSettings(apiKey: string) {
 
 export function removeSearchSettings() {
   return api<AiStatus>('/web-settings', { method: 'DELETE' });
+}
+
+export function saveResearchSettings(provider: ResearchProvider, apiKey: string) {
+  return api<AiStatus>('/research-settings', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, apiKey }),
+  });
+}
+
+export function removeResearchSettings(provider: ResearchProvider) {
+  return api<AiStatus>('/research-settings', {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
+  });
+}
+
+export function testResearchConnection(provider: ResearchProvider) {
+  return api<{ ok: true; provider: ResearchProvider }>('/research-test', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
+  });
 }
 
 export async function requestResearch(question: string, onEvent: (event: ResearchEvent) => void, signal?: AbortSignal) {
@@ -156,21 +195,30 @@ export async function requestResearch(question: string, onEvent: (event: Researc
     let event: ResearchEvent;
     try { event = JSON.parse(line) as ResearchEvent; }
     catch { throw new Error('Research service sent an invalid response.'); }
+    if (!event || typeof event !== 'object' || typeof event.stage !== 'string') throw new Error('Research service sent an invalid response.');
+    if ((event.stage === 'local' || event.stage === 'web') && !Array.isArray(event.results)) throw new Error('Research service sent invalid source records.');
+    if (event.stage === 'answer' && (!event.analysis || typeof event.analysis.title !== 'string' || typeof event.analysis.summary !== 'string' || !Array.isArray(event.analysis.findings))) throw new Error('Research service sent an invalid analysis.');
     if (event.stage === 'done') done = true;
     onEvent(event);
   };
-  while (true) {
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    buffer += decoder.decode(chunk.value, { stream: true });
-    let newline = buffer.indexOf('\n');
-    while (newline !== -1) {
-      emit(buffer.slice(0, newline));
-      buffer = buffer.slice(newline + 1);
-      newline = buffer.indexOf('\n');
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+      if (buffer.length > 2 * 1024 * 1024) throw new Error('Research service sent too much data at once.');
+      let newline = buffer.indexOf('\n');
+      while (newline !== -1) {
+        emit(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+        newline = buffer.indexOf('\n');
+      }
     }
+    buffer += decoder.decode();
+    if (buffer.trim()) emit(buffer);
+    if (!done) throw new Error('Research ended before the answer was complete.');
+  } finally {
+    if (!done) await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
-  buffer += decoder.decode();
-  if (buffer.trim()) emit(buffer);
-  if (!done) throw new Error('Research ended before the answer was complete.');
 }

@@ -8,6 +8,8 @@ import { Readability } from '@mozilla/readability';
 
 const cache = new Map();
 const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_PDF_BYTES = 16 * 1024 * 1024;
+export const sourceByteLimit = type => /pdf/i.test(type) ? MAX_PDF_BYTES : MAX_BYTES;
 const CACHE_MS = 15 * 60 * 1000;
 
 export function isPublicAddress(address) {
@@ -45,7 +47,13 @@ export async function validateRemoteUrl(value, lookupImpl = lookup) {
   if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password ||
       (url.port && !['80', '443'].includes(url.port)) ||
       /(^|\.)(localhost|local|internal|invalid|test)$/.test(host)) throw new Error('This source address is not public.');
-  const addresses = isIP(host) ? [{ address: host, family: isIP(host) }] : await Promise.race([lookupImpl(host, { all: true, verbatim: true }), new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error('The source DNS lookup timed out.')), 8000); timer.unref?.(); })]);
+  let addresses, dnsTimer;
+  try {
+    addresses = isIP(host) ? [{ address: host, family: isIP(host) }] : await Promise.race([
+      lookupImpl(host, { all: true, verbatim: true }),
+      new Promise((_, reject) => { dnsTimer = setTimeout(() => reject(new Error('The source DNS lookup timed out.')), 8000); dnsTimer.unref?.(); }),
+    ]);
+  } finally { clearTimeout(dnsTimer); }
   if (!addresses.length || addresses.some(item => !isPublicAddress(item.address))) throw new Error('This source address is not public.');
   return { url, address: addresses.find(item => item.family === 4) || addresses[0] };
 }
@@ -86,8 +94,9 @@ async function downloadSource(value, signal, redirect = 0) {
         reject(new Error('The source is not an article, text document, or PDF.'));
         return;
       }
+      const maxBytes = sourceByteLimit(type);
       const declared = Number(res.headers['content-length'] || 0);
-      if (declared > MAX_BYTES) {
+      if (declared > maxBytes) {
         res.destroy();
         reject(new Error('The source document is too large.'));
         return;
@@ -96,7 +105,7 @@ async function downloadSource(value, signal, redirect = 0) {
       let bytes = 0;
       res.on('data', chunk => {
         bytes += chunk.length;
-        if (bytes > MAX_BYTES) {
+        if (bytes > maxBytes) {
           res.destroy(new Error('The source document is too large.'));
           return;
         }
@@ -112,7 +121,7 @@ async function downloadSource(value, signal, redirect = 0) {
     req.end();
   });
   if (result.redirect) return downloadSource(result.redirect, signal, redirect + 1);
-  const limits = { maxOutputLength: MAX_BYTES };
+  const limits = { maxOutputLength: sourceByteLimit(result.type) };
   if (result.encoding === 'gzip') result.buffer = gunzipSync(result.buffer, limits);
   else if (result.encoding === 'deflate') result.buffer = inflateSync(result.buffer, limits);
   else if (result.encoding === 'br') result.buffer = brotliDecompressSync(result.buffer, limits);
@@ -185,13 +194,26 @@ export async function extractPdf(buffer) {
 export function selectPassages(content, question, limit = 16000) {
   if (content.length <= limit) return content;
   const terms = [...new Set(question.toLowerCase().match(/[a-z]{3,}/g) || [])].filter(term => !['the', 'and', 'for', 'with', 'compare', 'what', 'which', 'people'].includes(term));
-  const passages = content.split(/\n\n+/).filter(Boolean);
+  const passages = content.split(/\n\n+/).filter(Boolean).flatMap(paragraph => {
+    const chunks = [];
+    // A long introduction must not consume the entire budget and hide relevant tables.
+    for (let offset = 0; offset < paragraph.length;) {
+      let end = Math.min(offset + 1800, paragraph.length);
+      if (end < paragraph.length) {
+        const boundary = paragraph.lastIndexOf(' ', end);
+        if (boundary > offset + 900) end = boundary;
+      }
+      chunks.push(paragraph.slice(offset, end).trim());
+      offset = end;
+    }
+    return chunks;
+  });
   const ranked = passages.map((text, index) => ({
     text, index,
     score: terms.reduce((total, term) => total + (text.toLowerCase().includes(term) ? 2 : 0), 0) + (/\d.*(%|salary|rent|cost|INR|Rs|million|lakh)/i.test(text) ? 2 : 0),
   })).sort((a, b) => b.score - a.score);
-  const selected = new Set([0, 1]);
-  let chars = (passages[0]?.length || 0) + (passages[1]?.length || 0);
+  const selected = new Set([0]);
+  let chars = passages[0]?.length || 0;
   for (const item of ranked) {
     if (selected.has(item.index)) continue;
     if (chars + item.text.length > limit - 200) continue;

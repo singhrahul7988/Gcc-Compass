@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CheckCircle2, KeyRound, LoaderCircle, ShieldCheck, Trash2, X } from 'lucide-react';
-import { providerNames, removeAiSettings, removeSearchSettings, saveAiSettings, saveSearchSettings, suggestedModels, testAiConnection } from './aiClient';
-import type { AiProvider, AiStatus } from './aiClient';
+import { providerNames, removeAiSettings, removeResearchSettings, saveAiSettings, saveResearchSettings, researchProviderNames, testResearchConnection, suggestedModels, testAiConnection } from './aiClient';
+import type { AiProvider, AiStatus, ResearchProvider } from './aiClient';
 
 type Props = {
   status: AiStatus;
@@ -11,6 +11,8 @@ type Props = {
 };
 
 const providers: AiProvider[] = ['openai', 'gemini', 'claude', 'deepseek'];
+const researchServices: ResearchProvider[] = ['tavily', 'exa', 'firecrawl', 'serper'];
+const serviceRoles: Record<ResearchProvider, string> = { tavily: 'Search and source text', exa: 'Additional sources and page text', firecrawl: 'Browser rendering and page reading', serper: 'Google search fallback' };
 const keyExamples: Record<AiProvider, string> = {
   openai: 'sk-...', gemini: 'AIza...', claude: 'sk-ant-...', deepseek: 'sk-...',
 };
@@ -19,24 +21,46 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
   const [provider, setProvider] = useState<AiProvider>(status.provider || 'openai');
   const [model, setModel] = useState(() => status.model || suggestedModels.openai[0]);
   const [apiKey, setApiKey] = useState('');
+  const [researchProvider, setResearchProvider] = useState<ResearchProvider>('tavily');
   const [searchKey, setSearchKey] = useState('');
-  const [searchPending, setSearchPending] = useState<'save' | 'remove' | null>(null);
+  const [searchPending, setSearchPending] = useState<'save' | 'test' | 'remove' | null>(null);
   const searchBusy = searchPending !== null;
   const [searchMessage, setSearchMessage] = useState('');
   const [searchError, setSearchError] = useState('');
   const [pending, setPending] = useState<'save' | 'test' | 'remove' | null>(null);
-  const busy = pending !== null;
+  const busy = pending !== null || searchBusy;
+  const allBusy = busy;
+  const connectedResearch = status.researchProviders || (status.searchConfigured ? ['serper'] : []);
+  const researchSaved = connectedResearch.includes(researchProvider);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const keyInput = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
   const selectedSaved = status.saved.find(item => item.provider === provider);
 
   useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     keyInput.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close.current();
+      if (event.key !== 'Tab') return;
+      const controls = [...(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]') || [])];
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+      else document.querySelector<HTMLButtonElement>('[aria-label="User profile"]')?.focus();
+    };
+  }, []);
 
   const chooseProvider = (next: AiProvider) => {
     setProvider(next);
@@ -91,7 +115,7 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
     event.preventDefault();
     setSearchPending('save'); setSearchMessage(''); setSearchError('');
     try {
-      const next = await saveSearchSettings(searchKey.trim());
+      const next = await saveResearchSettings(researchProvider, searchKey.trim());
       onStatusChange(next);
       setSearchKey('');
       setSearchMessage('Saved.');
@@ -105,7 +129,8 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
   const removeSearch = async () => {
     setSearchPending('remove'); setSearchMessage(''); setSearchError('');
     try {
-      onStatusChange(await removeSearchSettings());
+      onStatusChange(await removeResearchSettings(researchProvider));
+      setSearchKey('');
       setSearchMessage('Key removed.');
     } catch (removeError) {
       setSearchError((removeError as Error).message);
@@ -114,8 +139,18 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
     }
   };
 
+  const chooseResearch = (next: ResearchProvider) => {
+    setResearchProvider(next); setSearchKey(''); setSearchMessage(''); setSearchError('');
+  };
+  const testResearch = async () => {
+    setSearchPending('test'); setSearchMessage(''); setSearchError('');
+    try { await testResearchConnection(researchProvider); setSearchMessage('Connection verified.'); }
+    catch (testError) { setSearchError((testError as Error).message); }
+    finally { setSearchPending(null); }
+  };
+
   return <div className="ai-settings-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="ai-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
+    <section ref={dialog} className="ai-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
       <div className="ai-settings-header">
         <div className="ai-settings-icon" aria-hidden="true"><KeyRound size={20} /></div>
         <h2 id="ai-settings-title">Manage API keys</h2>
@@ -131,8 +166,7 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
           </div>
           <div className="ai-settings-field">
             <label htmlFor="ai-model">Model</label>
-            <input id="ai-model" list="ai-model-options" value={model} onChange={event => { setModel(event.target.value); setMessage(''); setError(''); }} placeholder={suggestedModels[provider][0]} autoComplete="off" spellCheck={false} disabled={busy} />
-            <datalist id="ai-model-options">{suggestedModels[provider].map(item => <option key={item} value={item} />)}</datalist>
+            <input id="ai-model" value={model} onChange={event => { setModel(event.target.value); setMessage(''); setError(''); }} placeholder={suggestedModels[provider][0]} autoComplete="off" spellCheck={false} disabled={busy} />
           </div>
         </div>
         <div className="ai-settings-field">
@@ -150,16 +184,25 @@ export function AiSettings({ status, onStatusChange, onClose }: Props) {
         {message && <p className="ai-settings-success" role="status"><CheckCircle2 size={16} /> {message}</p>}
       </form>
       <section className="ai-settings-search" aria-labelledby="ai-settings-search-title">
-        <h3 id="ai-settings-search-title">Web search</h3>
-        <p>Research the web and read source pages with <a href="https://serper.dev/" target="_blank" rel="noreferrer">Serper</a>.</p>
-        <form aria-label="Web search" onSubmit={saveSearch}>
+        <h3 id="ai-settings-search-title">Research APIs</h3>
+        <p>Connected services work together to find sources and read pages. Add each key once.</p>
+        <div className="ai-settings-services" aria-label="Research services">
+          {researchServices.map(item => <button key={item} type="button" className={researchProvider === item ? 'selected' : ''} aria-pressed={researchProvider === item} disabled={allBusy} onClick={() => chooseResearch(item)}>
+            <span>{researchProviderNames[item]}{connectedResearch.includes(item) && <CheckCircle2 size={15} aria-label="Connected" />}</span>
+            <small>{serviceRoles[item]}</small>
+          </button>)}
+        </div>
+        <form aria-label="Research APIs" onSubmit={saveSearch}>
           <div className="ai-settings-field">
-            <label htmlFor="ai-search-key">Serper API key</label>
-            <input id="ai-search-key" type="password" autoComplete="off" spellCheck={false} value={searchKey} onChange={event => { setSearchKey(event.target.value); setSearchMessage(''); setSearchError(''); }} placeholder={status.searchConfigured ? 'Enter a replacement key' : 'Enter API key'} disabled={searchBusy} />
+            <label htmlFor="ai-search-key">{researchProviderNames[researchProvider]} API key</label>
+            <input id="ai-search-key" type="password" autoComplete="off" spellCheck={false} value={searchKey} onChange={event => { setSearchKey(event.target.value); setSearchMessage(''); setSearchError(''); }} placeholder={researchSaved ? 'Enter a replacement key' : 'Enter API key'} disabled={allBusy} />
           </div>
           <div className="ai-settings-actions">
-            {status.searchConfigured && <button type="button" className="ai-settings-remove" aria-label="Remove web search key" onClick={removeSearch} disabled={searchBusy}>{searchPending === 'remove' ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />} Remove key</button>}
-            <button type="submit" className="ai-settings-primary" disabled={searchBusy || searchKey.trim().length < 10}>{searchPending === 'save' && <LoaderCircle size={15} className="spin" />} Save</button>
+            {researchSaved && <button type="button" className="ai-settings-remove" aria-label={'Remove ' + researchProviderNames[researchProvider] + ' key'} onClick={removeSearch} disabled={allBusy}>{searchPending === 'remove' ? <LoaderCircle size={15} className="spin" /> : <Trash2 size={15} />} Remove key</button>}
+            <div className="ai-settings-submit-actions">
+              {researchSaved && <button type="button" className="ai-settings-secondary" onClick={testResearch} disabled={allBusy}>{searchPending === 'test' && <LoaderCircle size={15} className="spin" />} Test connection</button>}
+              <button type="submit" className="ai-settings-primary" disabled={allBusy || searchKey.trim().length < 10}>{searchPending === 'save' && <LoaderCircle size={15} className="spin" />} Save</button>
+            </div>
           </div>
           {searchError && <p className="ai-settings-error" role="alert">{searchError}</p>}
           {searchMessage && <p className="ai-settings-success" role="status"><CheckCircle2 size={16} /> {searchMessage}</p>}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BarChart3, Bell, Building2, Calculator, Command, KeyRound, Map, Network, Search, Sparkles } from 'lucide-react';
 import { CityCompare } from './components/CityCompare';
 import { BuildVsBuy } from './components/BuildVsBuy';
@@ -6,6 +6,7 @@ import { GccAtlas } from './components/GccAtlas';
 import { MarketSnapshot } from './components/MarketSnapshot';
 import { AiAnalyst } from './components/AiAnalyst';
 import { AiSettings } from './components/AiSettings';
+import { Ecosystem } from './components/Ecosystem';
 import { getAiStatus } from './components/aiClient';
 import type { AiStatus } from './components/aiClient';
 import { assumptions, cityBenchmarks, dataStats, gccRecords, stakeholders, statePolicies } from './data';
@@ -22,11 +23,24 @@ const navItems = [
 type Page = (typeof navItems)[number][0];
 
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : location.hash.startsWith('#analyst') ? 'analyst' : 'overview');
+  const [activePage, setActivePage] = useState<Page>(() => location.hash.startsWith('#cities=') ? 'cities' : location.hash.startsWith('#build') ? 'build' : location.hash.startsWith('#analyst') ? 'analyst' : location.hash.startsWith('#ecosystem') ? 'ecosystem' : 'overview');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<AiStatus>({ configured: false, provider: null, model: null, saved: [], searchConfigured: false });
   const profileRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const updateHeaderHeight = () => {
+      header.parentElement?.style.setProperty('--topbar-height', `${header.getBoundingClientRect().height}px`);
+    };
+    updateHeaderHeight();
+    const observer = new ResizeObserver(updateHeaderHeight);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     getAiStatus().then(setAiStatus).catch(() => setAiStatus({ configured: false, provider: null, model: null, saved: [], searchConfigured: false }));
@@ -48,16 +62,24 @@ export default function App() {
     };
   }, [profileOpen]);
 
+  const openPage = (page: Page) => {
+    setActivePage(page);
+    if (page === 'ecosystem') {
+      if (!location.hash.startsWith('#ecosystem')) history.replaceState(null, '', '#ecosystem');
+    }
+    else if (location.hash.startsWith('#ecosystem')) history.replaceState(null, '', location.pathname + location.search);
+  };
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <button className="brand brand-button" onClick={() => setActivePage('overview')} aria-label="GCC Compass home">
+      <header className="topbar" ref={headerRef}>
+        <button className="brand brand-button" onClick={() => openPage('overview')} aria-label="GCC Compass home">
           <span className="brand-mark" aria-hidden="true"><i /></span>
           <div><strong>GCC Compass</strong><small>by Flexiple</small></div>
         </button>
         <nav>
           {navItems.map(([page, label, Icon]) => (
-            <button className={activePage === page ? 'active' : ''} onClick={() => setActivePage(page)} key={page}>
+            <button className={activePage === page ? 'active' : ''} onClick={() => openPage(page)} key={page}>
               <Icon size={16} />{label}
             </button>
           ))}
@@ -88,7 +110,9 @@ export default function App() {
         ) : activePage === 'build' ? (
           <BuildVsBuy cities={cityBenchmarks} assumptions={assumptions} />
         ) : activePage === 'analyst' ? (
-          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiProvider={aiStatus.provider} aiModel={aiStatus.model} searchConfigured={aiStatus.searchConfigured} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
+          <AiAnalyst cities={cityBenchmarks} records={gccRecords} stakeholders={stakeholders} assumptions={assumptions} policies={statePolicies} aiConfigured={aiStatus.configured} aiProvider={aiStatus.provider} aiModel={aiStatus.model} searchConfigured={aiStatus.searchConfigured} connectionRevision={aiStatus.revision} onOpenSettings={() => setSettingsOpen(true)} onOpenCityCompare={() => setActivePage('cities')} onOpenBuildVsBuy={() => setActivePage('build')} />
+        ) : activePage === 'ecosystem' ? (
+          <Ecosystem stakeholders={stakeholders} records={gccRecords} />
         ) : (
           <section className="page-placeholder">
             <p className="eyebrow">{navItems.find(([page]) => page === activePage)?.[1]}</p>

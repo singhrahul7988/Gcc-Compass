@@ -1,33 +1,46 @@
-# Dependencies
+# Dependencies and build output
 node_modules/
+/dist/
+/coverage/
 
-# Build output
-dist/
+# Internal working materials (kept locally)
+/[Dd]ocs/
+/artifacts/
+/[Pp]itch[Dd]eck/
+/[Pp]itch-[Dd]eck/
 
-# Local environment and logs
+# Research inputs, inventories, and intermediate data
+# The processed CSVs are required by the frontend and AI server.
+/dataset/*
+!/dataset/processed/
+
+# Local environment and credentials
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs and temporary outputs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/tmp-*
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
-# Local browser/test session artifacts
+# Local tooling and browser sessions
+/.codex/
+/.agents/
 .playwright-mcp/
-
-# Generated screenshots and verification captures
-artifacts/*.png
-artifacts/**/*.png
-
-# Large raw/generated research artifacts
-dataset/raw/
-dataset/organized/01_by_category/
-dataset/organized/02_visual_review/
-dataset/organized/03_extracted_tables/
-dataset/organized/04_spreadsheet_profiles/
-dataset/organized/05_reconciliation/pdf_text_snippets/
-dataset/organized/07_noise_review/
+.vscode/
+.idea/
 
 # OS/editor noise
 .DS_Store
